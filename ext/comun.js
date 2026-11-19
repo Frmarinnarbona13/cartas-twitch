@@ -173,7 +173,8 @@ function elementoPack(tipo) {
   const brillo = crear('div', 'brillo');
   if (tipo?.imagen_url) {
     // El reflejo solo se dibuja sobre la parte visible de la portada
-    for (const prop of ['maskImage', 'webkitMaskImage']) brillo.style[prop] = `url("${tipo.imagen_url}")`;
+    // JSON.stringify escapa comillas y barras: la URL no puede "salirse" del url(...)
+    for (const prop of ['maskImage', 'webkitMaskImage']) brillo.style[prop] = `url(${JSON.stringify(tipo.imagen_url)})`;
     for (const prop of ['maskSize', 'webkitMaskSize']) brillo.style[prop] = 'contain';
     for (const prop of ['maskRepeat', 'webkitMaskRepeat']) brillo.style[prop] = 'no-repeat';
     for (const prop of ['maskPosition', 'webkitMaskPosition']) brillo.style[prop] = 'center';
@@ -351,7 +352,7 @@ const NOTAS = {
 };
 function multiplicadorNota(nota) {
   if (!nota) return 1;
-  return { 10: 10, 9: 5, 8: 3, 7: 2, 6: 1.5, 5: 1.2 }[nota] || 1;
+  return { 10: 10, 9: 5, 8: 3, 7: 2, 6: 1.5, 5: 1.2, 4: 1, 3: 0.5, 2: 0.25, 1: 0.1 }[nota] ?? 1;
 }
 function valorPolvo(carta, nota, tabla) {
   return Math.round((tabla?.[carta.rareza] ?? 0) * multiplicadorNota(nota));

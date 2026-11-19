@@ -110,6 +110,7 @@ function irA(seccion, vista) {
   } else {
     mostrarVista('perfil');
     pintarPerfil();
+    cargarLogros();
     if (!estado.ranking) cargarRanking().then(pintarPerfil);
   }
 }
@@ -140,6 +141,7 @@ async function cargar() {
     pintarGloboCambios(datos.intercambios_pendientes);
     pintarPolvo();
     pintarGloboCert();
+    pintarGloboPerfil();
     irA(estado.seccion, estado.vista);
   } catch (e) {
     console.error(e);
@@ -1118,7 +1120,7 @@ function pintarCertificar() {
   const { certificacion, certificaciones, en_directo, polvo_por_rareza } = estado.datos;
   $('cert-explicacion').textContent =
     `Envía una carta a certificar por ✦ ${certificacion.coste}. Tarda ${certificacion.minutos} min de directo ` +
-    `(solo avanza mientras el canal está en directo y tienes la extensión abierta). Al terminar recibe una nota del 1 al 10 que multiplica su valor.`;
+    `(solo avanza mientras el canal está en directo y tienes la extensión abierta). Al terminar recibe una nota del 1 al 10: las notas altas multiplican su valor, pero un 3 o menos lo reduce.`;
 
   const directo = $('cert-directo');
   directo.className = 'estado-directo' + (en_directo ? ' si' : '');
@@ -1163,14 +1165,12 @@ function pintarCertificar() {
   // Tabla de notas
   const tabla = $('tabla-notas');
   tabla.innerHTML = '';
-  for (const n of [10, 9, 8, 7, 6, 5]) {
-    const d = crear('div');
-    d.append(crear('b', null, '★ ' + n), crear('span', null, NOTAS[n]), crear('em', null, '×' + multiplicadorNota(n) + ' valor'));
+  for (const n of [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
+    const m = multiplicadorNota(n);
+    const d = crear('div', m < 1 ? 'pierde' : '');
+    d.append(crear('b', null, '★ ' + n), crear('span', null, NOTAS[n]), crear('em', null, '×' + String(m).replace('.', ',') + ' valor'));
     tabla.appendChild(d);
   }
-  const resto = crear('div');
-  resto.append(crear('b', null, '★ 1-4'), crear('span', null, 'Usada o peor'), crear('em', null, '×1 valor'));
-  tabla.appendChild(resto);
 
   // Certificadas
   const fundas = $('fundas');
@@ -1285,9 +1285,115 @@ async function recogerCert(cert, datos) {
   Sonido.play('revelar', sonidoPorNota);
   const base = valorPolvo(r.carta, null, estado.datos.polvo_por_rareza);
   const valor = crear('div', 'valor');
-  valor.append('Valor al desmontar: ✦ ' + base + ' → ', crear('b', null, '✦ ' + valorPolvo(r.carta, r.nota, estado.datos.polvo_por_rareza)));
+  const nuevo = crear('b', null, '✦ ' + valorPolvo(r.carta, r.nota, estado.datos.polvo_por_rareza));
+  if (multiplicadorNota(r.nota) < 1) nuevo.style.color = '#f87171';
+  valor.append('Valor al desmontar: ✦ ' + base + ' → ', nuevo);
   const ok = crear('button', 'btn primario', 'Genial');
   ok.addEventListener('click', () => capa.remove());
   capa.append(valor, ok);
   await cargar();
+}
+
+// ------------------------------------------------------------------
+// Recompensa diaria y logros (en Perfil)
+// ------------------------------------------------------------------
+function pintarGloboPerfil() {
+  const r = estado.datos?.recompensas;
+  const hay = r && (r.diaria.disponible || r.logros_listos > 0);
+  $('globo-perfil').classList.toggle('oculto', !hay);
+}
+
+async function cargarLogros() {
+  try {
+    const r = await api('/api/logros');
+    estado.logros = r.logros;
+    estado.datos.recompensas = { diaria: r.diaria, logros_listos: r.logros.filter((l) => l.completado && !l.reclamado).length };
+    pintarGloboPerfil();
+    pintarDiaria();
+    pintarLogros();
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+function pintarDiaria() {
+  const d = estado.datos.recompensas.diaria;
+  const caja = $('diaria');
+  caja.innerHTML = '';
+  const cab = crear('div', 'diaria-cab');
+  const titulo = crear('div');
+  titulo.append(crear('b', null, 'Recompensa diaria'), crear('span', 'gris pequeno', d.racha ? `Racha de ${d.racha} ${d.racha === 1 ? 'día' : 'días'} 🔥` : 'Entra cada día para subir la racha'));
+  cab.appendChild(titulo);
+  caja.appendChild(cab);
+
+  const dias = crear('div', 'dias');
+  const hechoHasta = d.disponible ? (d.siguiente_dia - 1) : d.racha;
+  for (let i = 1; i <= 7; i++) {
+    const dia = crear('div', 'dia' + (i <= hechoHasta ? ' hecho' : '') + (d.disponible && i === d.siguiente_dia ? ' hoy' : ''));
+    dia.append(crear('span', null, 'Día ' + i), crear('b', null, '✦' + (10 + 5 * (i - 1))));
+    dias.appendChild(dia);
+  }
+  caja.appendChild(dias);
+
+  const boton = crear('button', 'btn primario btn-grande', d.disponible ? `Reclamar ✦ ${d.premio}` : 'Vuelve mañana para seguir la racha');
+  boton.disabled = !d.disponible;
+  boton.addEventListener('click', async () => {
+    boton.disabled = true;
+    try {
+      const r = await api('/api/diaria', { method: 'POST' });
+      Sonido.play('polvo');
+      avisar(`✨ +${r.premio} de polvo · racha de ${r.racha} ${r.racha === 1 ? 'día' : 'días'}`);
+      estado.datos.usuario.polvo = r.polvo;
+      pintarPolvo();
+      await cargarLogros();
+    } catch (e) {
+      avisar(e.message, true);
+      boton.disabled = false;
+    }
+  });
+  caja.appendChild(boton);
+}
+
+function pintarLogros() {
+  const lista = $('lista-logros');
+  lista.innerHTML = '';
+  const logros = [...estado.logros].sort((a, b) =>
+    (b.completado && !b.reclamado) - (a.completado && !a.reclamado) || a.reclamado - b.reclamado || b.actual / b.objetivo - a.actual / a.objetivo);
+  $('logros-resumen').textContent = `· ${estado.logros.filter((l) => l.reclamado).length}/${estado.logros.length}`;
+
+  for (const l of logros) {
+    const fila = crear('div', 'logro' + (l.reclamado ? ' reclamado' : l.completado ? ' listo' : ''));
+    const ico = crear('div', 'logro-ico');
+    ico.appendChild(icono(l.reclamado ? 'check' : 'top'));
+    const info = crear('div', 'logro-info');
+    info.append(crear('b', null, l.nombre), crear('span', null, l.desc));
+    const barra = crear('div', 'barra');
+    const relleno = crear('div');
+    relleno.style.width = (l.actual / l.objetivo) * 100 + '%';
+    barra.appendChild(relleno);
+    info.appendChild(barra);
+    const der = crear('div', 'logro-der');
+    if (l.completado && !l.reclamado) {
+      const b = crear('button', 'btn primario', `✦ ${l.premio}`);
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          const r = await api('/api/logros/reclamar', { method: 'POST', body: { logro: l.id } });
+          Sonido.play('revelar', 'legendaria');
+          avisar(`🏆 ¡${l.nombre}! +${r.premio} de polvo`);
+          estado.datos.usuario.polvo = r.polvo;
+          pintarPolvo();
+          await cargarLogros();
+        } catch (e) {
+          avisar(e.message, true);
+          b.disabled = false;
+        }
+      });
+      der.appendChild(b);
+    } else {
+      der.append(crear('span', 'premio', `✦ ${l.premio}`), crear('span', 'progreso-num', `${l.actual}/${l.objetivo}`));
+    }
+    fila.append(ico, info, der);
+    lista.appendChild(fila);
+  }
 }

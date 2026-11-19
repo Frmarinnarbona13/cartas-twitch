@@ -18,6 +18,9 @@ const RUTAS = {
   'tienda/comprar':    { POST: publico.comprar },
   'certificar':        { POST: publico.certificar },
   'certificar/recoger': { POST: publico.recogerCertificacion },
+  'logros':            { GET: publico.logros },
+  'logros/reclamar':   { POST: publico.reclamarLogro },
+  'diaria':            { POST: publico.diaria },
 
   'intercambios':             { GET: intercambios.listar, POST: intercambios.crear },
   'intercambios/responder':   { POST: intercambios.responder },
