@@ -1,0 +1,291 @@
+/* =====================================================================
+   Estilos compartidos: colores, tipografía, botones, CARTAS, reverso,
+   sobres y animación de apertura. Los usan la vista del espectador y
+   el panel de admin.
+   ===================================================================== */
+:root {
+  --fondo: #0a0a0d;
+  --fondo-1: #111116;
+  --fondo-2: #17171e;
+  --fondo-3: #1f1f28;
+  --borde: #26262f;
+  --borde-2: #33333f;
+  --texto: #f4f3f8;
+  --texto-2: #a3a1b3;
+  --texto-3: #6c6a7c;
+
+  --morado: #9b5cff;
+  --morado-2: #c4a5ff;
+  --rosa: #f05fb0;
+  --degradado: linear-gradient(90deg, #a855f7, #ec4899);
+  --verde: #22c55e;
+  --rojo: #ef4444;
+  --ambar: #f59e0b;
+
+  /* Rarezas */
+  --r-comun: #b9bcc6;
+  --r-rara: #4f9dff;
+  --r-epica: #b061ff;
+  --r-legendaria: #f7b928;
+  --r-divina: #ff6ad5;
+
+  --display: "Arial Black", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --cuerpo: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --carta-titulo: Impact, "Haettenschweiler", "Arial Narrow Bold", "Arial Black", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--fondo); color: var(--texto); font-family: var(--cuerpo); font-size: 13px; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.oculto { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Scrollbar discreta */
+* { scrollbar-width: thin; scrollbar-color: #33333f transparent; }
+
+/* ---------------- Botones ---------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--fondo-3); border: 1px solid var(--borde-2); border-radius: 10px;
+  padding: 8px 14px; font-weight: 700; transition: background .15s, transform .1s, box-shadow .15s;
+}
+.btn:hover { background: #292935; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: default; transform: none; }
+.btn.primario { background: linear-gradient(90deg, #9333ea, #6d4aff); border-color: transparent; box-shadow: 0 4px 18px -6px rgba(147, 51, 234, .7); }
+.btn.primario:hover { filter: brightness(1.08); }
+.btn.blanco { background: #fff; color: #0a0a0d; border-color: #fff; }
+.btn.fantasma { background: transparent; }
+.btn.peligro { background: transparent; color: var(--rojo); border-color: rgba(239, 68, 68, .4); }
+.btn.redondo { width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+.btn svg { width: 16px; height: 16px; }
+
+.titulo-display { font-family: var(--display); font-weight: 900; letter-spacing: -.02em; margin: 0; }
+.antetitulo { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--texto-3); font-weight: 700; }
+.degradado-texto { background: var(--degradado); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  background: var(--fondo-2); border: 1px solid var(--borde); font-size: 11px; font-weight: 700; color: var(--texto-2);
+}
+.chip.activo { background: #fff; color: #0a0a0d; border-color: #fff; }
+.punto { width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--r-comun)); display: inline-block; }
+
+/* Rareza -> variable --c */
+.r-comun { --c: var(--r-comun); }
+.r-rara { --c: var(--r-rara); }
+.r-epica { --c: var(--r-epica); }
+.r-legendaria { --c: var(--r-legendaria); }
+.r-divina { --c: var(--r-divina); }
+
+.etiqueta-rareza {
+  display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+}
+
+/* =====================================================================
+   CARTA
+   Todo se escala con el ancho de la carta (unidades cqw), así sirve
+   igual en miniatura que a pantalla completa.
+   ===================================================================== */
+.carta {
+  --c: var(--r-comun);
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  border-radius: 5.5% / 3.93%;   /* (las unidades cqw no valen para la propia carta) */
+  background: var(--c);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  isolation: isolate;
+}
+.carta .c-marco {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 2.6cqw;
+  background: #101014; border-radius: 3.6cqw; overflow: hidden; position: relative;
+}
+
+/* Cabecera: nombre + coste */
+.carta .c-cab {
+  display: flex; align-items: center; justify-content: center; position: relative;
+  height: 14cqw; padding: 0 13cqw 0 4cqw; background: var(--c); color: #111;
+}
+.carta .c-nombre {
+  font-family: var(--carta-titulo); font-style: italic; text-transform: uppercase; letter-spacing: .02em;
+  font-size: 8.6cqw; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.carta .c-coste {
+  position: absolute; right: 2.5cqw; top: 50%; transform: translateY(-50%);
+  width: 9.5cqw; height: 9.5cqw; border-radius: 50%; background: #0c0c0f; color: #fff; border: .7cqw solid #fff;
+  display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 900; font-size: 5.4cqw;
+}
+
+/* Ilustración */
+.carta .c-arte { position: relative; aspect-ratio: 5 / 4; background: #1b1b22; overflow: hidden; border-bottom: .8cqw solid var(--c); }
+.carta .c-arte img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.carta .c-badge {
+  position: absolute; font-size: 3.6cqw; font-weight: 900; letter-spacing: .04em; text-transform: uppercase;
+  padding: .8cqw 2cqw; border-radius: 1.4cqw; line-height: 1.2; white-space: nowrap;
+}
+.carta .c-nueva { top: 2.5cqw; left: 2.5cqw; background: #ffd23f; color: #3a2a00; box-shadow: 0 0 0 .5cqw rgba(0, 0, 0, .25); }
+.carta .c-limitada { bottom: 2.5cqw; left: 2.5cqw; background: #f59e0b; color: #2b1700; }
+.carta .c-rareza { bottom: 2.5cqw; right: 2.5cqw; background: #0c0c0f; color: var(--c); border: .5cqw solid var(--c); }
+
+/* Caja de texto */
+.carta .c-texto {
+  flex: 1; min-height: 0; background: #fbfaf7; color: #1c1c22; padding: 2.8cqw 4cqw 1.5cqw;
+  display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 1.2cqw; overflow: hidden;
+}
+.carta .c-desc { margin: 0; font-weight: 800; font-size: 4.6cqw; line-height: 1.22; }
+.carta .c-frase { margin: 0; font-family: Georgia, "Times New Roman", serif; font-style: italic; color: #6b6b75; font-size: 3.8cqw; line-height: 1.2; }
+.carta .c-pie {
+  display: flex; justify-content: space-between; align-items: flex-end; background: #fbfaf7; color: #1c1c22;
+  padding: 1.2cqw 4cqw 2.4cqw; border-top: .35cqw dashed #d4d2cc; margin: 0 2cqw;
+}
+.carta .c-pie small { display: block; font-size: 2.6cqw; color: #8a8892; font-weight: 800; letter-spacing: .08em; }
+.carta .c-pie b { font-size: 3.4cqw; font-weight: 800; }
+.carta .c-num { font-size: 3.4cqw; font-weight: 900; }
+
+/* Efectos por rareza */
+.carta.r-comun { box-shadow: 0 2px 10px rgba(0, 0, 0, .45); }
+.carta.r-rara { box-shadow: 0 0 0 1px rgba(79, 157, 255, .3), 0 4px 14px rgba(79, 157, 255, .25); }
+.carta.r-epica { box-shadow: 0 0 0 1px rgba(176, 97, 255, .35), 0 4px 18px rgba(176, 97, 255, .35); }
+.carta.r-legendaria { box-shadow: 0 0 0 1px rgba(247, 185, 40, .45), 0 4px 22px rgba(247, 185, 40, .45); }
+.carta.r-legendaria::after,
+.carta.r-divina::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .45) 45%, transparent 60%);
+  background-size: 250% 100%; mix-blend-mode: overlay; animation: brillo 3.2s ease-in-out infinite;
+}
+.carta.r-divina {
+  background: linear-gradient(135deg, #ff6ad5, #ffd36a, #6affc3, #6ab8ff, #c26aff, #ff6ad5);
+  background-size: 300% 300%; animation: holo 6s linear infinite;
+  box-shadow: 0 0 0 1px rgba(255, 106, 213, .5), 0 6px 26px rgba(255, 106, 213, .5);
+}
+.carta.r-divina .c-cab { background: transparent; }
+.carta.r-divina .c-arte { border-bottom-color: rgba(255, 255, 255, .7); }
+.carta.r-divina .c-rareza { color: #fff; border-color: #fff; background: linear-gradient(90deg, #c026d3, #6366f1); }
+.carta.r-divina::after { background: linear-gradient(115deg, transparent 25%, rgba(255, 255, 255, .6) 40%, rgba(120, 220, 255, .4) 50%, transparent 65%); background-size: 250% 100%; }
+@keyframes brillo { 0% { background-position: 120% 0; } 60%, 100% { background-position: -120% 0; } }
+@keyframes holo { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+
+/* Carta en gris (descartada / no poseída) */
+.carta.gris { filter: grayscale(1) brightness(.62); }
+
+/* =====================================================================
+   REVERSO de carta (boca abajo)
+   ===================================================================== */
+.reverso {
+  width: 100%; aspect-ratio: 5 / 7; border-radius: 7%/5%; position: relative;
+  background: #141419; border: 1px solid #2a2a33; box-shadow: 0 4px 16px rgba(0, 0, 0, .5);
+  display: flex; align-items: center; justify-content: center; transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.reverso::before { content: ""; position: absolute; inset: 4%; border-radius: 5%/3.6%; border: 1px solid #24242c; }
+.reverso .emblema { width: 26%; opacity: .35; transition: opacity .2s, filter .2s; }
+
+/* =====================================================================
+   SOBRE (pack) — portada o diseño por defecto
+   ===================================================================== */
+.pack {
+  position: relative; width: 100%; aspect-ratio: 3 / 4.3; border-radius: 6px; overflow: hidden;
+  background: var(--pack-fondo, linear-gradient(160deg, #7c3aed, #4c1d95 55%, #1e1b4b));
+  box-shadow: 0 8px 26px -8px rgba(0, 0, 0, .8);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8%;
+}
+.pack::before, .pack::after {
+  /* Bordes "sellados" de arriba y abajo */
+  content: ""; position: absolute; left: 0; right: 0; height: 7%;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .55) 0 2px, rgba(255, 255, 255, .15) 2px 5px), linear-gradient(180deg, #d9d4ff, #8b80c9);
+  opacity: .85;
+}
+.pack::before { top: 0; }
+.pack::after { bottom: 0; }
+.pack .brillo { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .28) 48%, transparent 60%); background-size: 250% 100%; animation: brillo 4s ease-in-out infinite; pointer-events: none; }
+.pack .diamante { width: 22%; aspect-ratio: 1; border: 2px solid rgba(255, 255, 255, .7); transform: rotate(45deg); border-radius: 4px; box-shadow: 0 0 18px rgba(255, 255, 255, .35); }
+.pack .pack-nombre { font-family: var(--display); font-weight: 900; text-transform: uppercase; text-align: center; font-size: clamp(10px, 11cqw, 26px); line-height: 1.05; padding: 0 10%; text-shadow: 0 2px 10px rgba(0, 0, 0, .5); }
+.pack { container-type: inline-size; }
+.pack.con-imagen { background: transparent; box-shadow: none; overflow: visible; }
+.pack.con-imagen::before, .pack.con-imagen::after, .pack.con-imagen .diamante, .pack.con-imagen .pack-nombre { display: none; }
+.pack.con-imagen img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .7)); }
+.pack.con-imagen .brillo { display: none; }
+
+/* =====================================================================
+   APERTURA DE SOBRE
+   ===================================================================== */
+.apertura {
+  position: absolute; inset: 0; z-index: 40; overflow: hidden auto;
+  background: radial-gradient(ellipse at 50% 35%, #1c1430 0%, #0a0a0d 70%);
+  display: flex; flex-direction: column; align-items: center; padding: 18px 14px 24px;
+}
+.apertura .ap-cerrar { position: absolute; top: 10px; right: 10px; z-index: 5; }
+.apertura .ap-escena { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-height: 100%; }
+
+.ap-sobre { width: min(46%, 220px); position: relative; }
+.ap-sobre .pack { transition: transform .3s; }
+.ap-sobre.flotando .pack { animation: flotar 2.4s ease-in-out infinite; }
+.ap-sobre.temblando .pack { animation: temblar .45s ease-in-out infinite; }
+.ap-sobre.rasgando .pack { animation: rasgar .7s ease-in forwards; }
+.ap-sobre .destello { position: absolute; left: -60%; right: -60%; top: 30%; height: 40%; background: radial-gradient(ellipse, rgba(255, 255, 255, .95), transparent 65%); opacity: 0; pointer-events: none; }
+.ap-sobre.rasgando .destello { animation: destello .7s ease-out forwards; }
+@keyframes flotar { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
+@keyframes temblar { 0%, 100% { transform: rotate(0) scale(1.02); } 25% { transform: rotate(-4deg) scale(1.04); } 75% { transform: rotate(4deg) scale(1.04); } }
+@keyframes rasgar { 0% { transform: scale(1.05); } 40% { transform: scale(1.12); filter: brightness(1.6); } 100% { transform: scale(.4) translateY(80px); opacity: 0; filter: brightness(3); } }
+@keyframes destello { 0% { opacity: 0; transform: scaleX(.2); } 40% { opacity: 1; } 100% { opacity: 0; transform: scaleX(1.5); } }
+
+.ap-texto { font-size: 11px; letter-spacing: .4em; font-weight: 800; text-transform: uppercase; }
+.ap-texto.latido { animation: latido 1.2s ease-in-out infinite; }
+@keyframes latido { 50% { opacity: .45; } }
+.ap-titulo { font-family: var(--display); font-weight: 900; font-size: clamp(18px, 6vw, 30px); letter-spacing: -.02em; text-align: center; margin: 0; }
+
+.ap-cartas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: 100%; max-width: 760px; perspective: 1000px; padding-top: 22px; }
+.ap-hueco { width: var(--ancho, 110px); position: relative; aspect-ratio: 5 / 7; opacity: 0; transform: translateY(30px) scale(.8); transition: transform .45s cubic-bezier(.2, 1.3, .4, 1), opacity .3s, filter .5s; }
+.ap-hueco.visible { opacity: 1; transform: none; }
+.ap-cartas.eligiendo .ap-hueco { cursor: pointer; }
+.ap-cartas.eligiendo .ap-hueco:hover { transform: translateY(-6px); }
+.ap-cartas.eligiendo .ap-hueco:hover .reverso,
+.ap-hueco.elegida .reverso { border-color: #b98cff; box-shadow: 0 0 0 1px #b98cff, 0 0 26px -2px rgba(155, 92, 255, .8); }
+.ap-cartas.eligiendo .ap-hueco:hover .emblema,
+.ap-hueco.elegida .emblema { opacity: 1; filter: drop-shadow(0 0 8px rgba(255, 210, 63, .8)); }
+.ap-hueco.elegida { transform: translateY(-10px) scale(1.06); z-index: 2; }
+.ap-hueco.descartada { filter: grayscale(1) brightness(.55); transform: scale(.95); }
+.ap-hueco.redoble { animation: redoble .1s linear infinite; }
+@keyframes redoble { 0%, 100% { transform: translateY(-10px) scale(1.06) rotate(-1.5deg); } 50% { transform: translateY(-10px) scale(1.06) rotate(1.5deg); } }
+.ap-hueco.ganadora { transform: translateY(-14px) scale(1.12); z-index: 3; }
+.ap-hueco.ganadora .carta { box-shadow: 0 0 0 2px var(--c), 0 0 40px 4px color-mix(in srgb, var(--c) 70%, transparent); }
+
+.ap-giro { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .65s cubic-bezier(.4, .1, .2, 1); }
+.ap-hueco.revelada .ap-giro { transform: rotateY(180deg); }
+.ap-cara { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.ap-cara.frente { transform: rotateY(180deg); }
+
+.ap-resultado { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; animation: subir .4s ease-out; }
+.ap-resultado h3 { margin: 0; font-family: var(--display); font-size: 17px; }
+.ap-resultado .botones { display: flex; gap: 8px; margin-top: 6px; }
+@keyframes subir { from { transform: translateY(14px); opacity: 0; } }
+
+.ap-flash { position: absolute; inset: 0; pointer-events: none; z-index: 6; animation: flash .9s ease-out forwards; }
+@keyframes flash { from { opacity: .9; } to { opacity: 0; } }
+
+.particula { position: absolute; width: 8px; height: 8px; border-radius: 2px; pointer-events: none; z-index: 7; animation: particula 1.4s cubic-bezier(.1, .7, .3, 1) forwards; }
+@keyframes particula { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+
+/* ---------------- Modal genérico ---------------- */
+.modal-fondo { position: absolute; inset: 0; z-index: 60; background: rgba(5, 5, 8, .78); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; animation: aparecer .2s; }
+.modal { background: var(--fondo-2); border: 1px solid var(--borde-2); border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+.modal h3 { margin: 0 0 8px; font-family: var(--display); font-size: 18px; }
+.modal p { color: var(--texto-2); margin: 0 0 12px; line-height: 1.45; }
+@keyframes aparecer { from { opacity: 0; } }
+
+.tabla-simple { width: 100%; border-collapse: collapse; border: 1px solid var(--borde); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+.tabla-simple th { text-align: left; font-size: 10px; letter-spacing: .12em; color: var(--texto-3); padding: 8px 12px; text-transform: uppercase; }
+.tabla-simple td { padding: 9px 12px; border-top: 1px solid var(--borde); }
+.tabla-simple tr.yo td { background: rgba(155, 92, 255, .12); }
+
+/* ---------------- Aviso flotante ---------------- */
+.aviso { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 90; background: var(--fondo-3); border: 1px solid var(--morado); border-radius: 12px; padding: 9px 14px; max-width: calc(100% - 24px); text-align: center; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); animation: subir .25s ease-out; }
+.aviso.error { border-color: var(--rojo); }

@@ -1,0 +1,206 @@
+// =====================================================================
+// Código compartido: conexión con el backend y dibujo de cartas/sobres.
+// =====================================================================
+
+// Dirección del backend. Si la extensión se sirve desde Vercel (Local Test)
+// se usa la misma web; si la aloja Twitch (Hosted Test / publicada), la fija.
+const API_FIJA = 'https://cartas-twitch.vercel.app';
+const API = location.hostname.endsWith('.ext-twitch.tv') ? API_FIJA : location.origin;
+
+const RAREZAS = {
+  comun: { nombre: 'Común', orden: 1 },
+  rara: { nombre: 'Rara', orden: 2 },
+  epica: { nombre: 'Épica', orden: 3 },
+  legendaria: { nombre: 'Legendaria', orden: 4 },
+  divina: { nombre: 'Divina', orden: 5 },
+};
+
+let tokenTwitch = null;
+
+async function api(ruta, opciones = {}) {
+  const r = await fetch(API + ruta, {
+    method: opciones.method || 'GET',
+    headers: {
+      Authorization: 'Bearer ' + tokenTwitch,
+      ...(opciones.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: opciones.body ? JSON.stringify(opciones.body) : undefined,
+  });
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const error = new Error(datos.mensaje || datos.error || 'Error ' + r.status);
+    error.codigo = datos.error;
+    throw error;
+  }
+  return datos;
+}
+
+// ------------------------------------------------------------------
+// Utilidades de DOM
+// ------------------------------------------------------------------
+function crear(etiqueta, clase, texto) {
+  const el = document.createElement(etiqueta);
+  if (clase) el.className = clase;
+  if (texto != null) el.textContent = texto;
+  return el;
+}
+
+function esperar(ms) {
+  return new Promise((resolver) => setTimeout(resolver, ms));
+}
+
+function textoRareza(r) {
+  return RAREZAS[r]?.nombre || r;
+}
+
+function numero3(n) {
+  return '#' + String(n).padStart(3, '0');
+}
+
+function fechaCorta(iso) {
+  return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function esNueva(iso) {
+  return iso && Date.now() - new Date(iso).getTime() < 24 * 3600 * 1000;
+}
+
+// Iconos (SVG en línea, sin dependencias)
+const ICONOS = {
+  coleccion: '<path d="M4 7h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M6 4h12M8 11h8"/>',
+  top: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  perfil: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  cerrar: '<path d="M6 6l12 12M18 6L6 18"/>',
+  ayuda: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/>',
+  reloj: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  rayo: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  zoom: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/>',
+  izq: '<path d="M15 6l-6 6 6 6"/>',
+  der: '<path d="M9 6l6 6-6 6"/>',
+  rejilla: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
+  lista: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  regalo: '<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8S10 3 7.5 4.5 9 8 12 8zm0 0s2-5 4.5-3.5S15 8 12 8z"/>',
+  lapiz: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
+  papelera: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  arriba: '<path d="M6 15l6-6 6 6"/>',
+  abajo: '<path d="M6 9l6 6 6-6"/>',
+  mas: '<path d="M12 5v14M5 12h14"/>',
+  resumen: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="4" rx="1"/><rect x="13" y="10" width="7" height="10" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/>',
+  capas: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  caja: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+  mando: '<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3M16 12h.01M18 14h.01"/>',
+  ajustes: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+};
+
+function icono(nombre, clase = '') {
+  const span = document.createElement('span');
+  span.className = 'ico ' + clase;
+  span.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ''}</svg>`;
+  return span;
+}
+
+// Emblema del reverso: carta con estrella
+const EMBLEMA_SVG =
+  '<svg class="emblema" viewBox="0 0 40 52" aria-hidden="true"><rect x="2" y="2" width="36" height="48" rx="5" fill="#6d4aff" stroke="#c4a5ff" stroke-width="2"/><rect x="7" y="7" width="26" height="20" rx="2" fill="#2e1d6b"/><path d="M20 10l1.8 5.2 5.2 1.8-5.2 1.8L20 24l-1.8-5.2L13 17l5.2-1.8z" fill="#ffd23f"/><rect x="8" y="32" width="18" height="2.5" rx="1" fill="#c4a5ff"/><rect x="8" y="37" width="12" height="2.5" rx="1" fill="#9b84e6"/><circle cx="31" cy="43" r="2" fill="#ffd23f"/></svg>';
+
+function elementoReverso() {
+  const el = crear('div', 'reverso');
+  el.innerHTML = EMBLEMA_SVG;
+  return el;
+}
+
+// ------------------------------------------------------------------
+// Dibuja una carta completa.
+// opciones: { serie, nueva, gris }
+// ------------------------------------------------------------------
+function elementoCarta(carta, opciones = {}) {
+  const el = crear('div', 'carta r-' + carta.rareza + (opciones.gris ? ' gris' : ''));
+  const marco = crear('div', 'c-marco');
+
+  const cab = crear('div', 'c-cab');
+  cab.appendChild(crear('span', 'c-nombre', carta.nombre || 'Sin nombre'));
+  cab.appendChild(crear('span', 'c-coste', String(carta.coste ?? 0)));
+  marco.appendChild(cab);
+
+  const arte = crear('div', 'c-arte');
+  if (carta.imagen_url) {
+    const img = document.createElement('img');
+    img.src = carta.imagen_url;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.draggable = false;
+    img.addEventListener('error', () => img.remove());
+    arte.appendChild(img);
+  }
+  if (opciones.nueva) arte.appendChild(crear('span', 'c-badge c-nueva', 'Nueva'));
+  if (carta.limite_copias) arte.appendChild(crear('span', 'c-badge c-limitada', '🔒 Edición limitada'));
+  arte.appendChild(crear('span', 'c-badge c-rareza', textoRareza(carta.rareza)));
+  marco.appendChild(arte);
+
+  const caja = crear('div', 'c-texto');
+  if (carta.descripcion) caja.appendChild(crear('p', 'c-desc', carta.descripcion));
+  if (carta.frase) caja.appendChild(crear('p', 'c-frase', carta.frase));
+  marco.appendChild(caja);
+
+  const pie = crear('div', 'c-pie');
+  const autor = crear('div');
+  autor.appendChild(crear('small', null, 'ARTISTA'));
+  autor.appendChild(crear('b', null, carta.artista || '—'));
+  pie.appendChild(autor);
+  const num = opciones.serie != null
+    ? '#' + opciones.serie + (carta.limite_copias ? '/' + carta.limite_copias : '')
+    : numero3(carta.id ?? 0);
+  pie.appendChild(crear('span', 'c-num', num));
+  marco.appendChild(pie);
+
+  el.appendChild(marco);
+  return el;
+}
+
+// Dibuja un sobre (portada propia o diseño por defecto)
+function elementoPack(tipo) {
+  const el = crear('div', 'pack');
+  if (tipo?.imagen_url) {
+    el.classList.add('con-imagen');
+    const img = document.createElement('img');
+    img.src = tipo.imagen_url;
+    img.alt = tipo.nombre || '';
+    img.draggable = false;
+    img.addEventListener('error', () => {
+      img.remove();
+      el.classList.remove('con-imagen');
+    });
+    el.appendChild(img);
+  }
+  el.appendChild(crear('div', 'diamante'));
+  el.appendChild(crear('div', 'pack-nombre', tipo?.nombre || 'Sobre'));
+  el.appendChild(crear('div', 'brillo'));
+  return el;
+}
+
+// Aviso flotante
+function avisar(texto, esError = false) {
+  let el = document.getElementById('aviso');
+  if (!el) {
+    el = crear('div', 'aviso');
+    el.id = 'aviso';
+    document.body.appendChild(el);
+  }
+  el.textContent = texto;
+  el.className = 'aviso' + (esError ? ' error' : '');
+  clearTimeout(avisar.t);
+  avisar.t = setTimeout(() => el.classList.add('oculto'), 3800);
+}
+
+// Modal sencillo. contenido: Node. Devuelve función para cerrar.
+function abrirModal(contenido, contenedor = document.body) {
+  const fondo = crear('div', 'modal-fondo');
+  const caja = crear('div', 'modal');
+  caja.appendChild(contenido);
+  fondo.appendChild(caja);
+  const cerrar = () => fondo.remove();
+  fondo.addEventListener('click', (e) => e.target === fondo && cerrar());
+  contenedor.appendChild(fondo);
+  return cerrar;
+}

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de cartas</title>
+  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="admin" id="admin">
+    <!-- ================= Barra lateral ================= -->
+    <aside class="lateral">
+      <div class="marca">
+        <div class="marca-logo">✦</div>
+        <div class="marca-nombre" id="marca-nombre">Cartas</div>
+      </div>
+      <nav class="menu" id="menu">
+        <div class="menu-grupo">Contenido</div>
+        <button data-sec="resumen" data-ico="resumen" class="activo">Resumen</button>
+        <button data-sec="cartas" data-ico="capas">Mis cartas</button>
+        <button data-sec="sobres" data-ico="caja">Sobres</button>
+        <button data-sec="simulador" data-ico="mando">Simulador</button>
+        <div class="menu-grupo">Directo</div>
+        <button data-sec="drops" data-ico="regalo">Drops y regalos</button>
+        <div class="menu-grupo">Canal</div>
+        <button data-sec="ajustes" data-ico="ajustes">Ajustes</button>
+      </nav>
+    </aside>
+
+    <main class="principal" id="principal">
+      <div class="estado-carga" id="estado-carga">Conectando con Twitch…</div>
+
+      <!-- ================= RESUMEN ================= -->
+      <section class="seccion activa" id="s-resumen">
+        <header class="cab">
+          <div>
+            <div class="antetitulo">Panel</div>
+            <h1 class="titulo-display">Resumen</h1>
+            <p class="sub">Lo que está pasando con tu colección.</p>
+          </div>
+          <button class="btn" id="btn-refrescar">Actualizar</button>
+        </header>
+        <div class="tiles" id="tiles"></div>
+        <div class="dos-col">
+          <div class="tarjeta">
+            <h2>Top semanal</h2>
+            <div id="resumen-top" class="lista-compacta"></div>
+          </div>
+          <div class="tarjeta">
+            <h2>Últimas cartas conseguidas</h2>
+            <div id="resumen-ultimas" class="lista-compacta"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= MIS CARTAS ================= -->
+      <section class="seccion" id="s-cartas">
+        <header class="cab">
+          <div>
+            <div class="antetitulo">Contenido</div>
+            <h1 class="titulo-display">Mis cartas</h1>
+            <p class="sub">Crea y gestiona tus cartas personalizadas.</p>
+          </div>
+          <div class="acciones-cab">
+            <input type="search" id="buscar-carta" class="input" placeholder="Busca una carta…">
+            <button class="btn primario" id="btn-nueva-carta">+ Nueva carta</button>
+          </div>
+        </header>
+        <div class="resumen-barra" id="cartas-resumen"></div>
+        <div class="chips" id="filtro-rareza"></div>
+        <div id="grupos-cartas"></div>
+      </section>
+
+      <!-- ================= SOBRES ================= -->
+      <section class="seccion" id="s-sobres">
+        <header class="cab">
+          <div>
+            <div class="antetitulo">Contenido</div>
+            <h1 class="titulo-display">Sobres</h1>
+            <p class="sub">Tipos de sobre, qué cartas contienen y sus probabilidades.</p>
+          </div>
+          <button class="btn primario" id="btn-nuevo-sobre">+ Nuevo sobre</button>
+        </header>
+        <div id="lista-sobres" class="lista-sobres"></div>
+      </section>
+
+      <!-- ================= SIMULADOR ================= -->
+      <section class="seccion" id="s-simulador">
+        <header class="cab">
+          <div>
+            <div class="antetitulo">Contenido</div>
+            <h1 class="titulo-display">Simulador</h1>
+            <p class="sub">Prueba tus probabilidades y la experiencia de apertura. No se guarda nada.</p>
+          </div>
+          <div class="acciones-cab">
+            <select id="sim-tipo" class="input"></select>
+            <button class="btn blanco" id="btn-tirada">↻ Nueva tirada</button>
+          </div>
+        </header>
+        <div class="escenario" id="sim-escenario">
+          <div class="escenario-vacio">Elige un sobre y pulsa «Nueva tirada».</div>
+        </div>
+        <div class="tarjeta oculto" id="sim-stats">
+          <h2>Estadística de <span id="sim-n">0</span> tiradas</h2>
+          <p class="sub">La carta que se queda el espectador, simulada muchas veces con tus porcentajes actuales.</p>
+          <table class="tabla-simple" id="sim-tabla"></table>
+          <div id="sim-cartas" class="lista-compacta"></div>
+        </div>
+      </section>
+
+      <!-- ================= DROPS ================= -->
+      <section class="seccion" id="s-drops">
+        <header class="cab">
+          <div>
+            <div class="antetitulo">Directo</div>
+            <h1 class="titulo-display">Drops y regalos</h1>
+            <p class="sub">Regala sobres o cartas a tu chat mientras estás en directo.</p>
+          </div>
+        </header>
+
+        <div class="tarjeta">
+          <h2>Drops rápidos</h2>
+          <p class="sub">Un clic: 1 sobre a un espectador aleatorio de los que tienen la extensión abierta.</p>
+          <div class="drops-rapidos" id="drops-rapidos"></div>
+        </div>
+
+        <div class="dos-col">
+          <div class="tarjeta">
+            <h2>Envío personalizado</h2>
+            <div class="campo">
+              <label>¿Qué quieres dar?</label>
+              <div class="segmentado" id="regalo-que">
+                <button data-v="sobre" class="activo">Sobre</button>
+                <button data-v="carta">Carta concreta</button>
+              </div>
+            </div>
+            <div class="campo" id="campo-regalo-sobre">
+              <label for="regalo-tipo">Tipo de sobre</label>
+              <select id="regalo-tipo" class="input"></select>
+            </div>
+            <div class="campo oculto" id="campo-regalo-carta">
+              <label for="regalo-carta">Carta</label>
+              <select id="regalo-carta" class="input"></select>
+            </div>
+            <div class="campo">
+              <label>¿A quién?</label>
+              <div class="segmentado" id="regalo-destino">
+                <button data-v="aleatorio" class="activo">Aleatorio (conectados)</button>
+                <button data-v="usuario">Usuario concreto</button>
+              </div>
+            </div>
+            <div class="campo oculto" id="campo-regalo-login">
+              <label for="regalo-login">Nombre de Twitch</label>
+              <input id="regalo-login" class="input" placeholder="ej: duckling">
+            </div>
+            <div class="campo">
+              <label for="regalo-cantidad">Cantidad</label>
+              <input id="regalo-cantidad" class="input corto" type="number" min="1" max="20" value="1">
+            </div>
+            <button class="btn primario ancho" id="btn-regalar">🎁 Enviar</button>
+          </div>
+          <div class="tarjeta">
+            <h2>Historial de esta sesión</h2>
+            <div id="historial" class="lista-compacta"><p class="sub">Aún no has enviado nada.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= AJUSTES ================= -->
+      <section class="seccion" id="s-ajustes">
+        <header class="cab">
+          <div>
+            <div class="antetitulo">Canal</div>
+            <h1 class="titulo-display">Ajustes</h1>
+            <p class="sub">Nombre de la colección y sobres gratis.</p>
+          </div>
+        </header>
+        <div class="tarjeta estrecha">
+          <h2>Colección</h2>
+          <div class="campo">
+            <label for="aj-nombre">Nombre que ven los espectadores</label>
+            <input id="aj-nombre" class="input" maxlength="30">
+          </div>
+          <h2 class="separado">Energía (sobres gratis)</h2>
+          <div class="fila">
+            <div class="campo">
+              <label for="aj-max">Máximo acumulable</label>
+              <input id="aj-max" class="input corto" type="number" min="1" max="50">
+            </div>
+            <div class="campo">
+              <label for="aj-recarga">Recarga 1 cada (minutos)</label>
+              <input id="aj-recarga" class="input corto" type="number" min="1" max="1440">
+            </div>
+          </div>
+          <div class="nota" id="aj-resumen"></div>
+          <div class="nota ambar">Cuando tu canal sea afiliado podremos dar más energía a los subs (recarga más rápida y más máximo).</div>
+          <button class="btn primario" id="btn-guardar-ajustes">Guardar ajustes</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ================= Panel lateral de edición ================= -->
+    <div class="cajon-fondo oculto" id="cajon">
+      <div class="cajon">
+        <div class="cajon-preview" id="cajon-preview"></div>
+        <div class="cajon-form">
+          <header class="cajon-cab">
+            <div>
+              <h2 id="cajon-titulo">Editar</h2>
+              <p class="sub" id="cajon-sub"></p>
+            </div>
+            <button class="btn redondo fantasma" id="cajon-cerrar"></button>
+          </header>
+          <div class="cajon-cuerpo" id="cajon-cuerpo"></div>
+          <footer class="cajon-pie" id="cajon-pie"></footer>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+  <script src="comun.js"></script>
+  <script src="apertura.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

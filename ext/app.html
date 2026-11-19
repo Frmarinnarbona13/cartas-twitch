@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cartas</title>
+  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Barra superior: energía y total de cartas -->
+    <header class="barra-top oculto" id="barra-top">
+      <button class="energia-num" id="btn-energia" title="¿Cómo funcionan los sobres gratis?">
+        <span id="energia-texto">0/0</span>
+        <span class="ico-ayuda"></span>
+      </button>
+      <div class="energia-barra">
+        <div class="energia-relleno" id="energia-relleno"></div>
+        <span class="energia-reloj" id="energia-reloj"></span>
+      </div>
+      <div class="total-cartas"><b id="total-cartas">0</b><span>CARTAS</span></div>
+    </header>
+
+    <main id="contenido">
+      <!-- Cargando -->
+      <section class="vista activa" id="v-cargando">
+        <div class="centro"><div class="spinner"></div></div>
+      </section>
+
+      <!-- Sin identidad compartida -->
+      <section class="vista" id="v-identidad">
+        <div class="centro">
+          <div class="identidad-icono"></div>
+          <h2 class="titulo-display">Conecta tu cuenta</h2>
+          <p class="gris">Para abrir sobres y guardar tu colección necesitamos saber quién eres en Twitch. Solo se usa tu ID.</p>
+          <button class="btn primario" id="btn-compartir">Conectar con Twitch</button>
+        </div>
+      </section>
+
+      <!-- Error -->
+      <section class="vista" id="v-error">
+        <div class="centro">
+          <h2 class="titulo-display">Ups…</h2>
+          <p class="gris" id="texto-error">No se pudo conectar.</p>
+          <button class="btn" id="btn-reintentar">Reintentar</button>
+        </div>
+      </section>
+
+      <!-- COLECCIÓN: Packs -->
+      <section class="vista" id="v-packs">
+        <div class="seccion-cab">
+          <div class="antetitulo">Sobres gratis</div>
+          <p class="gris pequeno">Cada sobre cuesta 1 de energía. La energía se recarga sola.</p>
+        </div>
+        <div class="rejilla-packs" id="lista-packs"></div>
+        <div class="vacio oculto" id="packs-vacio">
+          <p>Ahora mismo no hay sobres gratis disponibles.</p>
+        </div>
+      </section>
+
+      <!-- COLECCIÓN: Reserva (sobres regalados / sin abrir) -->
+      <section class="vista" id="v-reserva">
+        <div class="seccion-cab">
+          <div class="antetitulo">Tu reserva</div>
+          <p class="gris pequeno">Sobres que te han regalado o que dejaste sin abrir.</p>
+        </div>
+        <div class="rejilla-packs" id="lista-reserva"></div>
+        <div class="vacio oculto" id="reserva-vacio">
+          <p>No tienes sobres guardados.</p>
+          <p class="gris pequeno">Quédate en el directo: ¡pueden caer drops!</p>
+        </div>
+      </section>
+
+      <!-- COLECCIÓN: Álbum -->
+      <section class="vista" id="v-album">
+        <div class="progreso">
+          <div class="progreso-cab"><span class="antetitulo">Progresión</span><b id="progreso-pct" class="degradado-texto">0%</b></div>
+          <div class="barra"><div id="progreso-barra"></div></div>
+        </div>
+        <div class="controles">
+          <div class="segmentado" id="orden">
+            <button data-orden="rareza" class="activo">Rareza</button>
+            <button data-orden="fecha">Fecha</button>
+            <button data-orden="numero">Número</button>
+          </div>
+          <div class="segmentado" id="filtro">
+            <button data-filtro="todas">Todas</button>
+            <button data-filtro="mias" class="activo">Mías</button>
+          </div>
+        </div>
+        <div class="paginador">
+          <button class="btn redondo fantasma" id="pag-ant"></button>
+          <span id="pag-texto">Página 1 / 1</span>
+          <button class="btn redondo fantasma" id="pag-sig"></button>
+        </div>
+        <div class="album" id="album"></div>
+        <div class="vacio oculto" id="album-vacio">
+          <p>Todavía no tienes cartas.</p>
+          <p class="gris pequeno">Abre tu primer sobre en «Packs».</p>
+        </div>
+      </section>
+
+      <!-- TOP -->
+      <section class="vista" id="v-top">
+        <div class="top-cab">
+          <div class="antetitulo">Esta semana · se reinicia cada lunes</div>
+          <h2 class="titulo-display degradado-texto">Clasificación</h2>
+        </div>
+        <div class="podio" id="podio"></div>
+        <div class="lista-ranking" id="lista-ranking"></div>
+        <div class="vacio oculto" id="top-vacio"><p>Nadie ha abierto sobres esta semana. ¡Sé el primero!</p></div>
+      </section>
+
+      <!-- PERFIL -->
+      <section class="vista" id="v-perfil">
+        <div class="perfil-cab">
+          <div class="avatar" id="perfil-avatar">?</div>
+          <div>
+            <h2 class="titulo-display" id="perfil-nombre">—</h2>
+            <div class="antetitulo" id="perfil-sub">Coleccionista</div>
+          </div>
+        </div>
+        <div class="stats" id="perfil-stats"></div>
+        <div class="seccion-cab"><div class="antetitulo">Por rareza</div></div>
+        <div class="barras-rareza" id="perfil-rarezas"></div>
+        <div class="seccion-cab"><div class="antetitulo">Tu carta más rara</div></div>
+        <div class="mejor-carta" id="perfil-mejor"></div>
+      </section>
+    </main>
+
+    <!-- Navegación inferior flotante -->
+    <div class="navegacion oculto" id="navegacion">
+      <div class="segmentado sub-nav" id="sub-nav">
+        <button data-vista="packs" class="activo">Packs</button>
+        <button data-vista="reserva">Reserva <span class="globo oculto" id="globo-reserva">0</span></button>
+        <button data-vista="album">Álbum</button>
+      </div>
+      <nav class="nav-inferior" id="nav-inferior">
+        <button data-seccion="coleccion" class="activo"><span class="ico-nav" data-ico="coleccion"></span>Colección</button>
+        <button data-seccion="top"><span class="ico-nav" data-ico="top"></span>Top</button>
+        <button data-seccion="perfil"><span class="ico-nav" data-ico="perfil"></span>Perfil</button>
+      </nav>
+    </div>
+  </div>
+
+  <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+  <script src="comun.js"></script>
+  <script src="apertura.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
