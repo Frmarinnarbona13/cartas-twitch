@@ -84,6 +84,9 @@ function irA(seccion, vista) {
   if (seccion === 'coleccion') {
     mostrarVista(estado.vista);
     if (estado.vista === 'album') pintarAlbum();
+  } else if (seccion === 'cambios') {
+    mostrarVista('cambios');
+    cargarCambios();
   } else if (seccion === 'top') {
     mostrarVista('top');
     cargarRanking();
@@ -117,6 +120,7 @@ async function cargar() {
     pintarPacks();
     pintarReserva();
     $('total-cartas').textContent = datos.copias.length;
+    pintarGloboCambios(datos.intercambios_pendientes);
     irA(estado.seccion, estado.vista);
   } catch (e) {
     console.error(e);
@@ -133,6 +137,12 @@ async function ping() {
     estado.desfase = new Date(r.ahora).getTime() - Date.now();
     pintarEnergia();
     pintarPacks();
+    if (r.intercambios_pendientes > (estado.datos.intercambios_pendientes || 0)) {
+      avisar('🔄 ¡Tienes una nueva propuesta de intercambio!');
+      if (estado.seccion === 'cambios') cargarCambios();
+    }
+    estado.datos.intercambios_pendientes = r.intercambios_pendientes;
+    pintarGloboCambios(r.intercambios_pendientes);
     if (r.sobres_sin_abrir > estado.datos.reserva.length) {
       avisar('🎁 ¡Has recibido un sobre! Míralo en tu Reserva');
       await cargar();
@@ -383,7 +393,7 @@ function verDetalle(carta, mia) {
   info.appendChild(crear('div', 'fecha', 'Obtenida el ' + fechaCorta(mia.primera)));
 
   const zona = crear('div', 'zona-carta');
-  zona.appendChild(elementoCarta(carta, { serie: mia.series.length === 1 ? mia.series[0] : null }));
+  zona.appendChild(inclinable(elementoCarta(carta, { serie: mia.series.length === 1 ? mia.series[0] : null })));
   const lupa = crear('button', 'btn redondo');
   lupa.title = 'Ampliar';
   lupa.appendChild(icono('zoom'));
@@ -559,7 +569,7 @@ function pintarPerfil() {
   const zona = $('perfil-mejor');
   zona.innerHTML = '';
   if (mejor) {
-    zona.appendChild(elementoCarta(mejor.carta, { serie: mejor.copia.numero_serie }));
+    zona.appendChild(inclinable(elementoCarta(mejor.carta, { serie: mejor.copia.numero_serie })));
     const t = crear('div');
     t.appendChild(crear('h3', 'titulo-display', mejor.carta.nombre));
     t.appendChild(crear('span', 'etiqueta-rareza r-' + mejor.carta.rareza, textoRareza(mejor.carta.rareza)));
@@ -568,4 +578,292 @@ function pintarPerfil() {
   } else {
     zona.appendChild(crear('p', 'gris', 'Aún no tienes cartas.'));
   }
+}
+
+// ------------------------------------------------------------------
+// Intercambios
+// ------------------------------------------------------------------
+estado.cambios = null;
+estado.tabCambios = 'recibidos';
+
+function pintarGloboCambios(n) {
+  $('globo-cambios').textContent = n || 0;
+  $('globo-cambios').classList.toggle('oculto', !n);
+}
+
+$('tabs-cambios').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  estado.tabCambios = b.dataset.tab;
+  pintarCambios();
+});
+$('chk-acepta').addEventListener('change', async (e) => {
+  try {
+    await api('/api/intercambios/preferencia', { method: 'POST', body: { acepta: e.target.checked } });
+    avisar(e.target.checked ? 'Ahora puedes recibir propuestas' : 'Ya no recibirás propuestas nuevas');
+  } catch (err) {
+    e.target.checked = !e.target.checked;
+    avisar(err.message, true);
+  }
+});
+$('btn-crear-cambio').addEventListener('click', () => asistenteCambio());
+
+async function cargarCambios() {
+  try {
+    estado.cambios = await api('/api/intercambios');
+    $('chk-acepta').checked = estado.cambios.acepta_intercambios;
+    estado.datos.intercambios_pendientes = estado.cambios.recibidos.length;
+    pintarGloboCambios(estado.cambios.recibidos.length);
+    pintarCambios();
+  } catch (e) {
+    avisar('No se pudieron cargar los intercambios', true);
+  }
+}
+
+function minis(lista) {
+  const caja = crear('div', 'minis');
+  if (!lista.length) caja.appendChild(crear('span', 'nada', 'Nada'));
+  for (const c of lista) if (c.carta) caja.appendChild(elementoCarta(c.carta, { serie: c.numero_serie }));
+  return caja;
+}
+
+const TEXTO_ESTADO = { aceptado: 'Aceptado', rechazado: 'Rechazado', cancelado: 'Cancelado', fallido: 'Anulado' };
+
+function pintarCambios() {
+  const c = estado.cambios;
+  if (!c) return;
+  document.querySelectorAll('#tabs-cambios button').forEach((b) => b.classList.toggle('activo', b.dataset.tab === estado.tabCambios));
+  $('n-recibidos').textContent = c.recibidos.length;
+  $('n-recibidos').classList.toggle('oculto', !c.recibidos.length);
+  $('n-enviados').textContent = c.enviados.length ? `(${c.enviados.length})` : '';
+
+  const lista = $('lista-cambios');
+  lista.innerHTML = '';
+  const items = c[estado.tabCambios];
+  if (!items.length) {
+    const textos = {
+      recibidos: 'No tienes propuestas pendientes.',
+      enviados: 'No tienes propuestas enviadas esperando respuesta.',
+      historial: 'Aún no has hecho ningún intercambio.',
+    };
+    lista.appendChild(crear('div', 'vacio', textos[estado.tabCambios]));
+    return;
+  }
+
+  for (const t of items) {
+    const el = crear('div', 'cambio');
+    const cab = crear('div', 'cambio-cab');
+    const quien = crear('span');
+    if (t.estado === 'pendiente') {
+      if (t.enviado_por_mi) quien.append('Propuesta a ', crear('b', null, t.otro));
+      else quien.append(crear('b', null, t.otro), ' te propone');
+    } else {
+      quien.append('Con ', crear('b', null, t.otro), ' ');
+      quien.appendChild(crear('span', 'estado-cambio ' + t.estado, TEXTO_ESTADO[t.estado] || t.estado));
+    }
+    cab.append(quien, crear('span', 'cuando', fechaCorta(t.resuelto_en || t.creado_en)));
+
+    const lados = crear('div', 'cambio-lados');
+    const recibo = crear('div', 'lado recibo');
+    recibo.append(crear('div', 'antetitulo', 'Recibes'), minis(t.recibo));
+    const doy = crear('div', 'lado doy');
+    doy.append(crear('div', 'antetitulo', 'Das'), minis(t.doy));
+    const flecha = crear('div', 'flecha');
+    flecha.appendChild(icono('cambio'));
+    lados.append(recibo, flecha, doy);
+    el.append(cab, lados);
+
+    if (t.estado === 'pendiente') {
+      const botones = crear('div', 'cambio-botones');
+      const accion = (texto, valor, clase) => {
+        const b = crear('button', 'btn ' + clase, texto);
+        b.addEventListener('click', () => responderCambio(t.id, valor, b));
+        botones.appendChild(b);
+      };
+      if (t.enviado_por_mi) accion('Cancelar', 'cancelar', 'fantasma');
+      else {
+        accion('Rechazar', 'rechazar', 'fantasma');
+        accion('Aceptar', 'aceptar', 'primario');
+      }
+      el.appendChild(botones);
+    }
+    lista.appendChild(el);
+  }
+}
+
+async function responderCambio(id, accion, boton) {
+  boton.disabled = true;
+  try {
+    await api('/api/intercambios/responder', { method: 'POST', body: { id, accion } });
+    avisar({ aceptar: '✅ ¡Intercambio hecho! Las cartas ya están en tu álbum', rechazar: 'Propuesta rechazada', cancelar: 'Propuesta cancelada' }[accion]);
+    if (accion === 'aceptar') await cargar();
+  } catch (e) {
+    avisar(e.message, true);
+  }
+  await cargarCambios();
+}
+
+// Asistente: 1) a quién  2) qué ofreces  3) qué pides  4) confirmar
+function asistenteCambio() {
+  const sel = { persona: null, ofrezco: new Set(), pido: new Set(), suyas: null };
+  let paso = 1;
+
+  const capa = crear('div', 'asistente');
+  const cab = crear('div', 'asistente-cab');
+  const cerrar = crear('button', 'btn redondo fantasma');
+  cerrar.appendChild(icono('cerrar'));
+  cerrar.addEventListener('click', () => capa.remove());
+  cab.append(crear('h3', null, 'Nuevo intercambio'), cerrar);
+  const pasos = crear('div', 'pasos');
+  for (let i = 0; i < 4; i++) pasos.appendChild(crear('div'));
+  const cuerpo = crear('div', 'asistente-cuerpo');
+  const pie = crear('div', 'asistente-pie');
+  const atras = crear('button', 'btn fantasma', 'Atrás');
+  const siguiente = crear('button', 'btn primario', 'Siguiente');
+  pie.append(atras, crear('div', 'espacio'), siguiente);
+  capa.append(cab, pasos, cuerpo, pie);
+  $('app').appendChild(capa);
+
+  atras.addEventListener('click', () => { paso--; pintar(); });
+  siguiente.addEventListener('click', async () => {
+    if (paso < 4) { paso++; pintar(); return; }
+    siguiente.disabled = true;
+    try {
+      await api('/api/intercambios', { method: 'POST', body: { para: sel.persona.id, ofrecidas: [...sel.ofrezco], pedidas: [...sel.pido] } });
+      avisar(`📨 Propuesta enviada a ${sel.persona.nombre}`);
+      capa.remove();
+      estado.tabCambios = 'enviados';
+      cargarCambios();
+    } catch (e) {
+      avisar(e.message, true);
+      siguiente.disabled = false;
+    }
+  });
+
+  function rejillaSeleccion(copias, conjunto, alCambiar) {
+    const rejilla = crear('div', 'rejilla-sel');
+    for (const c of copias) {
+      if (!c.carta) continue;
+      const item = crear('div', 'sel-carta' + (conjunto.has(c.id) ? ' sel' : ''));
+      item.appendChild(elementoCarta(c.carta, { serie: c.numero_serie }));
+      item.appendChild(crear('div', 'marca-sel'));
+      const tick = crear('div', 'tick');
+      tick.appendChild(icono('check'));
+      item.appendChild(tick);
+      item.addEventListener('click', () => {
+        if (conjunto.has(c.id)) conjunto.delete(c.id);
+        else if (conjunto.size >= 5) return avisar('Máximo 5 cartas por lado', true);
+        else conjunto.add(c.id);
+        item.classList.toggle('sel', conjunto.has(c.id));
+        alCambiar();
+      });
+      rejilla.appendChild(item);
+    }
+    return rejilla;
+  }
+
+  function misCopias() {
+    const porId = new Map(estado.datos.catalogo.map((c) => [c.id, c]));
+    return estado.datos.copias
+      .map((c) => ({ id: c.id, numero_serie: c.numero_serie, carta: porId.get(c.carta_id) }))
+      .sort((a, b) => RAREZAS[b.carta?.rareza]?.orden - RAREZAS[a.carta?.rareza]?.orden);
+  }
+
+  async function pintar() {
+    pasos.querySelectorAll('div').forEach((d, i) => d.classList.toggle('hecho', i < paso));
+    atras.classList.toggle('oculto', paso === 1);
+    siguiente.textContent = paso === 4 ? 'Enviar propuesta' : 'Siguiente';
+    cuerpo.innerHTML = '';
+    const actualizar = () => {
+      siguiente.disabled =
+        (paso === 1 && !sel.persona) ||
+        (paso === 4 && sel.ofrezco.size + sel.pido.size === 0);
+      contador.textContent = paso === 2 ? `${sel.ofrezco.size}/5 elegidas` : paso === 3 ? `${sel.pido.size}/5 elegidas` : '';
+    };
+    const contador = crear('div', 'contador-sel');
+
+    if (paso === 1) {
+      cuerpo.appendChild(crear('h4', null, '¿Con quién?'));
+      cuerpo.appendChild(crear('p', 'gris pequeno', 'Busca a otro espectador del canal.'));
+      const buscador = crear('div', 'buscador');
+      const input = document.createElement('input');
+      input.placeholder = 'Nombre de Twitch…';
+      buscador.append(icono('buscar'), input);
+      const resultados = crear('div');
+      cuerpo.append(buscador, resultados);
+      const buscar = async () => {
+        try {
+          const r = await api('/api/usuarios?q=' + encodeURIComponent(input.value.trim()));
+          resultados.innerHTML = '';
+          if (!r.usuarios.length) resultados.appendChild(crear('p', 'gris pequeno', 'No se ha encontrado a nadie.'));
+          for (const u of r.usuarios) {
+            const b = crear('button', 'persona' + (sel.persona?.id === u.id ? ' activo' : ''));
+            b.append(crear('span', 'av', inicial(u.nombre)), crear('b', null, u.nombre));
+            b.addEventListener('click', () => {
+              if (sel.persona?.id !== u.id) { sel.pido.clear(); sel.suyas = null; }
+              sel.persona = u;
+              paso = 2;
+              pintar();
+            });
+            resultados.appendChild(b);
+          }
+        } catch (e) {
+          avisar(e.message, true);
+        }
+      };
+      let t;
+      input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(buscar, 300); });
+      buscar();
+      setTimeout(() => input.focus(), 50);
+    }
+
+    if (paso === 2) {
+      cuerpo.appendChild(crear('h4', null, '¿Qué ofreces?'));
+      cuerpo.appendChild(crear('p', 'gris pequeno', `Elige hasta 5 cartas tuyas para ${sel.persona.nombre}. Puedes no ofrecer nada.`));
+      cuerpo.appendChild(contador);
+      const mias = misCopias();
+      if (!mias.length) cuerpo.appendChild(crear('p', 'gris', 'Todavía no tienes cartas.'));
+      cuerpo.appendChild(rejillaSeleccion(mias, sel.ofrezco, actualizar));
+    }
+
+    if (paso === 3) {
+      cuerpo.appendChild(crear('h4', null, '¿Qué pides?'));
+      cuerpo.appendChild(crear('p', 'gris pequeno', `Elige hasta 5 cartas de ${sel.persona.nombre}. Puedes no pedir nada (sería un regalo).`));
+      cuerpo.appendChild(contador);
+      if (!sel.suyas) {
+        cuerpo.appendChild(crear('div', 'centro', '…'));
+        try {
+          sel.suyas = (await api('/api/usuarios/coleccion?id=' + encodeURIComponent(sel.persona.id))).copias;
+        } catch (e) {
+          avisar(e.message, true);
+          paso = 1;
+          return pintar();
+        }
+        if (paso !== 3) return;
+        cuerpo.lastChild.remove();
+      }
+      if (!sel.suyas.length) cuerpo.appendChild(crear('p', 'gris', 'Este espectador aún no tiene cartas.'));
+      cuerpo.appendChild(rejillaSeleccion(sel.suyas, sel.pido, actualizar));
+    }
+
+    if (paso === 4) {
+      cuerpo.appendChild(crear('h4', null, 'Revisa tu propuesta'));
+      cuerpo.appendChild(crear('p', 'gris pequeno', `${sel.persona.nombre} podrá aceptarla o rechazarla cuando entre.`));
+      const mias = misCopias().filter((c) => sel.ofrezco.has(c.id));
+      const suyas = (sel.suyas || []).filter((c) => sel.pido.has(c.id));
+      const lados = crear('div', 'cambio-lados');
+      lados.style.marginTop = '14px';
+      const recibo = crear('div', 'lado recibo');
+      recibo.append(crear('div', 'antetitulo', 'Recibes'), minis(suyas));
+      const doy = crear('div', 'lado doy');
+      doy.append(crear('div', 'antetitulo', 'Das'), minis(mias));
+      const flecha = crear('div', 'flecha');
+      flecha.appendChild(icono('cambio'));
+      lados.append(recibo, flecha, doy);
+      cuerpo.appendChild(lados);
+      if (!mias.length && !suyas.length) cuerpo.appendChild(crear('p', 'gris', 'Elige al menos una carta (vuelve atrás).'));
+    }
+    actualizar();
+  }
+  pintar();
 }

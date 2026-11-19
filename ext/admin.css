@@ -138,7 +138,7 @@ textarea.input { resize: vertical; min-height: 60px; }
 .cajon { display: flex; width: min(1080px, 100%); height: 100%; background: #0d0d11; border-left: 1px solid var(--borde-2); box-shadow: -20px 0 60px rgba(0, 0, 0, .6); animation: entrar .25s ease-out; }
 @keyframes entrar { from { transform: translateX(40px); opacity: 0; } }
 .cajon-preview { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; background: radial-gradient(ellipse at 50% 40%, #1c1430, #09090c 70%); }
-.cajon-preview .carta { width: min(300px, 80%); }
+.cajon-preview .inclinable { width: min(300px, 80%); }
 .cajon-preview .pack { width: 220px; }
 .cajon-preview .prob-caja { width: min(360px, 90%); }
 .cajon-form { width: 440px; flex-shrink: 0; display: flex; flex-direction: column; border-left: 1px solid var(--borde); }
@@ -169,7 +169,7 @@ textarea.input { resize: vertical; min-height: 60px; }
   .dos-col { grid-template-columns: 1fr; }
   .cajon { flex-direction: column; overflow-y: auto; }
   .cajon-preview { flex: none; padding: 20px; }
-  .cajon-preview .carta { width: 200px; }
+  .cajon-preview .inclinable { width: 200px; }
   .cajon-form { width: 100%; border-left: none; }
   .sobre-fila { grid-template-columns: 80px 1fr; }
   .acciones-fila { grid-column: 1 / -1; }

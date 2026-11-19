@@ -298,7 +298,7 @@ function editarCarta(carta) {
   const preview = () => {
     const zona = $('cajon-preview');
     zona.innerHTML = '';
-    zona.appendChild(elementoCarta({ ...c, id: c.id ?? datos.cartas.length + 1 }, { nueva: false }));
+    zona.appendChild(inclinable(elementoCarta({ ...c, id: c.id ?? datos.cartas.length + 1 }, { nueva: false })));
     zona.appendChild(crear('div', 'antetitulo', 'Vista previa'));
   };
 
@@ -824,8 +824,42 @@ async function cargarAjustes() {
   $('aj-max').value = datos.ajustes.energia_max;
   $('aj-recarga').value = datos.ajustes.energia_recarga_min;
   $('marca-nombre').textContent = datos.ajustes.nombre_coleccion;
+  $('aj-rareza-alerta').value = datos.ajustes.alerta_rareza_min;
+  pintarUrlAlertas();
   resumenAjustes();
 }
+
+for (const [k, v] of Object.entries(RAREZAS)) $('aj-rareza-alerta').appendChild(opcion(k, v.nombre + (k === 'divina' ? '' : ' o superior')));
+
+function pintarUrlAlertas() {
+  const url = `${API}/obs/alertas.html?clave=${datos.ajustes.clave_alertas}`;
+  $('aj-url-alertas').value = url;
+  $('aj-url-prueba').value = url + '&prueba=1';
+}
+['aj-url-alertas', 'aj-url-prueba'].forEach((id) => $(id).addEventListener('focus', (e) => e.target.select()));
+
+$('btn-copiar-alertas').addEventListener('click', async () => {
+  const input = $('aj-url-alertas');
+  input.select();
+  try {
+    await navigator.clipboard.writeText(input.value);
+    avisar('URL copiada');
+  } catch {
+    const ok = document.execCommand && document.execCommand('copy');
+    avisar(ok ? 'URL copiada' : 'Selecciónala y pulsa Ctrl+C', !ok);
+  }
+});
+
+$('btn-nueva-clave').addEventListener('click', async (e) => {
+  if (!confirmar(e.currentTarget)) return;
+  try {
+    datos.ajustes = (await api('/api/admin/ajustes', { method: 'PUT', body: { regenerar_clave: true } })).ajustes;
+    pintarUrlAlertas();
+    avisar('Nueva clave generada: actualiza la URL en OBS');
+  } catch (err) {
+    avisar(err.message, true);
+  }
+});
 
 function resumenAjustes() {
   const max = Number($('aj-max').value || 0);
@@ -842,7 +876,12 @@ $('btn-guardar-ajustes').addEventListener('click', async () => {
   try {
     datos.ajustes = (await api('/api/admin/ajustes', {
       method: 'PUT',
-      body: { nombre_coleccion: $('aj-nombre').value, energia_max: Number($('aj-max').value), energia_recarga_min: Number($('aj-recarga').value) },
+      body: {
+        nombre_coleccion: $('aj-nombre').value,
+        energia_max: Number($('aj-max').value),
+        energia_recarga_min: Number($('aj-recarga').value),
+        alerta_rareza_min: $('aj-rareza-alerta').value,
+      },
     })).ajustes;
     $('marca-nombre').textContent = datos.ajustes.nombre_coleccion;
     avisar('Ajustes guardados');

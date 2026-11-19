@@ -14,12 +14,14 @@ lib/                  → lógica del backend
   usuarios.js           registro de espectadores conectados
   rutas/publico.js      rutas del espectador (yo, ping, ranking, sobres…)
   rutas/admin.js        rutas del admin (cartas, sobres, drops, ajustes…)
+  rutas/intercambios.js intercambios de cartas entre espectadores
 ext/                  → frontend de la extensión
   app.html / app.js     vista del espectador (componente de vídeo o panel)
   admin.html / admin.js panel de admin (configuración en Twitch)
   comun.js              conexión con el backend y dibujo de cartas
   apertura.js           animación de apertura de sobres
   estilos.css           estilos compartidos (cartas, sobres, animaciones)
+obs/alertas.html      → alertas para OBS (Fuente → Navegador, 800×600)
 schema.sql            → primera versión de la base de datos (las ampliaciones posteriores están en Supabase → Database → Migrations)
 ```
 

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Alertas de cartas</title>
+  <link rel="stylesheet" href="../ext/estilos.css">
+  <style>
+    /* Fondo transparente para OBS (Fuente → Navegador, 800 × 600) */
+    html, body { background: transparent !important; overflow: hidden; height: 100%; }
+    .escena { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .alerta { display: flex; align-items: center; gap: 28px; opacity: 0; }
+    .alerta.entra { animation: entra .8s cubic-bezier(.2, 1.3, .4, 1) forwards; }
+    .alerta.sale { animation: sale .6s ease-in forwards; }
+    .alerta .zona-carta { width: 230px; position: relative; }
+    .alerta .zona-carta::before {
+      content: ""; position: absolute; inset: -40%; border-radius: 50%; z-index: -1;
+      background: radial-gradient(circle, color-mix(in srgb, var(--c) 70%, transparent), transparent 65%);
+      animation: latido 1.4s ease-in-out infinite;
+    }
+    .alerta .carta { transform: rotate(-4deg); }
+    .alerta .texto { max-width: 380px; text-shadow: 0 3px 14px rgba(0, 0, 0, .9); }
+    .alerta .usuario { font-family: var(--display); font-size: 40px; line-height: 1; }
+    .alerta .accion { font-size: 18px; font-weight: 700; color: #e9e6f5; margin: 8px 0 12px; text-transform: uppercase; letter-spacing: .14em; }
+    .alerta .nombre-carta { font-family: var(--display); font-size: 30px; color: var(--c); line-height: 1.05; }
+    .alerta .extra { margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .alerta .etiqueta-rareza { font-size: 14px; padding: 4px 12px; background: rgba(0, 0, 0, .65); }
+    .alerta .serie { font-size: 14px; font-weight: 800; padding: 4px 10px; border-radius: 6px; background: #f59e0b; color: #2b1700; }
+    @keyframes entra { 0% { opacity: 0; transform: scale(.4) translateY(80px); } 100% { opacity: 1; transform: none; } }
+    @keyframes sale { to { opacity: 0; transform: translateY(-40px) scale(.95); } }
+    .error { position: fixed; bottom: 10px; left: 10px; color: #f87171; font: 14px sans-serif; background: rgba(0,0,0,.7); padding: 6px 10px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="escena" id="escena"></div>
+
+  <script src="../ext/comun.js"></script>
+  <script>
+    // Muestra en el directo las cartas buenas que consigue tu chat.
+    // URL: /obs/alertas.html?clave=TU_CLAVE   (añade &prueba=1 para ver una de ejemplo)
+    const params = new URLSearchParams(location.search);
+    const clave = params.get('clave') || '';
+    const cola = [];
+    const vistas = new Set();
+    let desde = new Date().toISOString();
+    let mostrando = false;
+
+    const TEXTO = { sobre: 'ha conseguido', drop_carta: 'ha recibido' };
+
+    async function consultar() {
+      try {
+        const r = await fetch(`${location.origin}/api/alertas?clave=${encodeURIComponent(clave)}&desde=${encodeURIComponent(desde)}`);
+        const datos = await r.json();
+        if (!r.ok) throw new Error(datos.mensaje || 'Error');
+        document.getElementById('err')?.remove();
+        for (const a of datos.alertas) {
+          if (vistas.has(a.id)) continue;
+          vistas.add(a.id);
+          cola.push(a);
+          if (new Date(a.fecha) > new Date(desde)) desde = a.fecha;
+        }
+        siguiente();
+      } catch (e) {
+        if (!document.getElementById('err')) {
+          const el = crear('div', 'error', 'Alertas: ' + e.message);
+          el.id = 'err';
+          document.body.appendChild(el);
+        }
+      }
+    }
+
+    async function siguiente() {
+      if (mostrando || !cola.length) return;
+      mostrando = true;
+      const a = cola.shift();
+      const escena = document.getElementById('escena');
+
+      const alerta = crear('div', 'alerta r-' + a.carta.rareza);
+      const zona = crear('div', 'zona-carta');
+      zona.appendChild(elementoCarta(a.carta, { serie: a.numero_serie }));
+      const texto = crear('div', 'texto');
+      texto.append(
+        crear('div', 'usuario', a.usuario),
+        crear('div', 'accion', TEXTO[a.origen] || 'ha conseguido'),
+        crear('div', 'nombre-carta', a.carta.nombre),
+      );
+      const extra = crear('div', 'extra');
+      extra.appendChild(crear('span', 'etiqueta-rareza r-' + a.carta.rareza, textoRareza(a.carta.rareza)));
+      if (a.carta.limite_copias) extra.appendChild(crear('span', 'serie', `#${a.numero_serie} / ${a.carta.limite_copias}`));
+      texto.appendChild(extra);
+      alerta.append(zona, texto);
+      escena.innerHTML = '';
+      escena.appendChild(alerta);
+
+      alerta.classList.add('entra');
+      await esperar(6500);
+      alerta.classList.replace('entra', 'sale');
+      await esperar(700);
+      alerta.remove();
+      await esperar(400);
+      mostrando = false;
+      siguiente();
+    }
+
+    if (params.get('prueba')) {
+      cola.push({
+        id: 'prueba',
+        usuario: 'Espectador de prueba',
+        origen: 'sobre',
+        numero_serie: 1,
+        carta: {
+          id: 0, nombre: 'Dragón Celestial', rareza: 'divina', coste: 10, limite_copias: 1,
+          descripcion: 'Así se verá una alerta en tu directo.', frase: 'Prueba de alerta', artista: 'Tú',
+          imagen_url: `${location.origin}/api/arte?c1=f9a8d4&c2=312e81&lados=6`,
+        },
+      });
+      siguiente();
+    }
+    if (clave) {
+      consultar();
+      setInterval(consultar, 4000);
+    }
+  </script>
+</body>
+</html>

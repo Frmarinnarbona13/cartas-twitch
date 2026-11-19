@@ -101,6 +101,25 @@
         </div>
       </section>
 
+      <!-- CAMBIOS (intercambios) -->
+      <section class="vista" id="v-cambios">
+        <div class="top-cab">
+          <h2 class="titulo-display">Intercambio de cartas</h2>
+          <p class="gris pequeno">Cambia cartas con otros espectadores. No hace falta que estéis conectados a la vez.</p>
+        </div>
+        <button class="btn primario btn-grande" id="btn-crear-cambio">Crear un intercambio</button>
+        <label class="interruptor fila-ajuste">
+          <span><b>Recibir propuestas</b><br><span class="gris pequeno">Si lo desactivas, nadie podrá proponerte intercambios.</span></span>
+          <input type="checkbox" id="chk-acepta" checked>
+        </label>
+        <div class="segmentado pestanas-cambios" id="tabs-cambios">
+          <button data-tab="recibidos" class="activo">Recibidas <span class="globo oculto" id="n-recibidos">0</span></button>
+          <button data-tab="enviados">Enviadas <span id="n-enviados"></span></button>
+          <button data-tab="historial">Historial</button>
+        </div>
+        <div id="lista-cambios" class="lista-cambios"></div>
+      </section>
+
       <!-- TOP -->
       <section class="vista" id="v-top">
         <div class="top-cab">
@@ -138,6 +157,7 @@
       </div>
       <nav class="nav-inferior" id="nav-inferior">
         <button data-seccion="coleccion" class="activo"><span class="ico-nav" data-ico="coleccion"></span>Colección</button>
+        <button data-seccion="cambios"><span class="ico-nav" data-ico="cambio"></span>Cambios<span class="globo nav-globo oculto" id="globo-cambios">0</span></button>
         <button data-seccion="top"><span class="ico-nav" data-ico="top"></span>Top</button>
         <button data-seccion="perfil"><span class="ico-nav" data-ico="perfil"></span>Perfil</button>
       </nav>

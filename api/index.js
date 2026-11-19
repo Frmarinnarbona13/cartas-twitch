@@ -4,6 +4,7 @@
 import { handler, HttpError } from '../lib/http.js';
 import * as publico from '../lib/rutas/publico.js';
 import * as admin from '../lib/rutas/admin.js';
+import * as intercambios from '../lib/rutas/intercambios.js';
 
 const RUTAS = {
   'yo':                { GET: publico.yo },
@@ -12,6 +13,13 @@ const RUTAS = {
   'sobres/energia':    { POST: publico.usarEnergia },
   'sobres/abrir':      { POST: publico.abrir },
   'sobres/elegir':     { POST: publico.elegir },
+  'alertas':           { GET: publico.alertas },
+
+  'intercambios':             { GET: intercambios.listar, POST: intercambios.crear },
+  'intercambios/responder':   { POST: intercambios.responder },
+  'intercambios/preferencia': { POST: intercambios.preferencia },
+  'usuarios':                 { GET: intercambios.buscarUsuarios },
+  'usuarios/coleccion':       { GET: intercambios.coleccionDe },
 
   'admin/cartas':      { GET: admin.cartas, POST: admin.cartas, PUT: admin.cartas, DELETE: admin.cartas },
   'admin/tipos-sobre': { GET: admin.tiposSobre, POST: admin.tiposSobre, PUT: admin.tiposSobre, DELETE: admin.tiposSobre },

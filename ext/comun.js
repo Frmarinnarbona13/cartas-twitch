@@ -90,6 +90,9 @@ const ICONOS = {
   caja: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
   mando: '<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3M16 12h.01M18 14h.01"/>',
   ajustes: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  cambio: '<path d="M4 8h14l-4-4M20 16H6l4 4"/>',
+  check: '<path d="M5 12l5 5L20 7"/>',
+  buscar: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
   candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
 };
 
@@ -203,4 +206,27 @@ function abrirModal(contenido, contenedor = document.body) {
   fondo.addEventListener('click', (e) => e.target === fondo && cerrar());
   contenedor.appendChild(fondo);
   return cerrar;
+}
+
+// Efecto 3D: la carta se inclina siguiendo el ratón y un reflejo holográfico
+// se mueve por encima. Devuelve el mismo elemento.
+function inclinable(carta) {
+  const envoltura = crear('div', 'inclinable');
+  const reflejo = crear('div', 'reflejo');
+  carta.appendChild(reflejo);
+  envoltura.appendChild(carta);
+  envoltura.addEventListener('pointermove', (e) => {
+    const r = envoltura.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    carta.style.transform = `perspective(700px) rotateY(${(x - 0.5) * 22}deg) rotateX(${(0.5 - y) * 22}deg) scale(1.03)`;
+    carta.style.setProperty('--mx', x * 100 + '%');
+    carta.style.setProperty('--my', y * 100 + '%');
+    carta.classList.add('activa');
+  });
+  envoltura.addEventListener('pointerleave', () => {
+    carta.style.transform = '';
+    carta.classList.remove('activa');
+  });
+  return envoltura;
 }
