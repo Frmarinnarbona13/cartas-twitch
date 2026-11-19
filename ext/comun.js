@@ -123,7 +123,7 @@ function elementoReverso() {
 // opciones: { serie, nueva, gris }
 // ------------------------------------------------------------------
 function elementoCarta(carta, opciones = {}) {
-  const el = crear('div', 'carta r-' + carta.rareza + (opciones.gris ? ' gris' : ''));
+  const el = crear('div', `carta r-${carta.rareza} diseno-${carta.diseno || 'clasica'} efecto-${carta.efecto || 'auto'}` + (opciones.gris ? ' gris' : ''));
   const marco = crear('div', 'c-marco');
 
   const cab = crear('div', 'c-cab');
@@ -168,8 +168,14 @@ function elementoCarta(carta, opciones = {}) {
 
 // Dibuja un sobre (portada propia o diseño por defecto)
 function elementoPack(tipo) {
-  const el = crear('div', 'pack');
+  const el = crear('div', 'pack efecto-' + (tipo?.efecto || 'brillo'));
+  const brillo = crear('div', 'brillo');
   if (tipo?.imagen_url) {
+    // El reflejo solo se dibuja sobre la parte visible de la portada
+    for (const prop of ['maskImage', 'webkitMaskImage']) brillo.style[prop] = `url("${tipo.imagen_url}")`;
+    for (const prop of ['maskSize', 'webkitMaskSize']) brillo.style[prop] = 'contain';
+    for (const prop of ['maskRepeat', 'webkitMaskRepeat']) brillo.style[prop] = 'no-repeat';
+    for (const prop of ['maskPosition', 'webkitMaskPosition']) brillo.style[prop] = 'center';
     el.classList.add('con-imagen');
     const img = document.createElement('img');
     img.src = tipo.imagen_url;
@@ -183,7 +189,7 @@ function elementoPack(tipo) {
   }
   el.appendChild(crear('div', 'diamante'));
   el.appendChild(crear('div', 'pack-nombre', tipo?.nombre || 'Sobre'));
-  el.appendChild(crear('div', 'brillo'));
+  el.appendChild(brillo);
   return el;
 }
 
@@ -318,3 +324,19 @@ const Sonido = (() => {
     },
   };
 })();
+
+// Nombres para los selectores del admin
+const DISENOS = {
+  clasica: { nombre: 'Clásica', desc: 'Ilustración arriba y texto abajo' },
+  arte_completo: { nombre: 'Arte completo', desc: 'La ilustración ocupa toda la carta' },
+  minimalista: { nombre: 'Minimalista', desc: 'Solo nombre e ilustración, sin texto' },
+};
+const EFECTOS = {
+  auto: { nombre: 'Automático', desc: 'Según la rareza' },
+  ninguno: { nombre: 'Ninguno', desc: 'Sin efecto' },
+  brillo: { nombre: 'Brillo', desc: 'Un destello que recorre la carta' },
+  arcoiris: { nombre: 'Holo arcoíris', desc: 'Reflejo de colores clásico' },
+  galaxia: { nombre: 'Galaxia', desc: 'Estrellas que titilan' },
+  dorado: { nombre: 'Dorado', desc: 'Lámina de oro brillante' },
+  cristal: { nombre: 'Cristal', desc: 'Prisma que cambia de color' },
+};

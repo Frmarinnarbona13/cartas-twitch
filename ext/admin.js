@@ -290,7 +290,7 @@ function fichaCarta(c) {
 
 function editarCarta(carta) {
   const nueva = !carta;
-  const c = carta ? { ...carta } : { nombre: '', coste: 0, rareza: 'comun', imagen_url: '', descripcion: '', frase: '', artista: '', grupo: '', limite_copias: null, activa: true };
+  const c = carta ? { ...carta } : { nombre: '', coste: 0, rareza: 'comun', imagen_url: '', descripcion: '', frase: '', artista: '', grupo: '', limite_copias: null, activa: true, diseno: 'clasica', efecto: 'auto', copias_emitidas: 0 };
   cajon.abrir({
     titulo: nueva ? 'Nueva carta' : 'Editar carta',
     sub: nueva ? 'Rellena los datos; la vista previa se actualiza sola.' : `${numero3(c.id)} · ${c.copias_emitidas} copias emitidas`,
@@ -300,7 +300,9 @@ function editarCarta(carta) {
     const zona = $('cajon-preview');
     zona.innerHTML = '';
     zona.appendChild(inclinable(elementoCarta({ ...c, id: c.id ?? datos.cartas.length + 1 }, { nueva: false })));
-    zona.appendChild(crear('div', 'antetitulo', 'Vista previa'));
+    zona.appendChild(crear('div', 'antetitulo', 'Vista previa · pasa el ratón por encima'));
+    zona.appendChild(tablaAparicion(c));
+    pintarMiniDisenos();
   };
 
   const cuerpo = $('cajon-cuerpo');
@@ -329,6 +331,39 @@ function editarCarta(carta) {
     rarezas.appendChild(b);
   }
 
+  // Diseño: tres mini cartas para elegir
+  const disenos = crear('div', 'disenos-sel');
+  const pintarMiniDisenos = () => {
+    disenos.innerHTML = '';
+    for (const [k, info] of Object.entries(DISENOS)) {
+      const b = crear('button', 'diseno-op' + (c.diseno === k ? ' activo' : ''));
+      b.type = 'button';
+      b.title = info.desc;
+      b.appendChild(elementoCarta({ ...c, id: c.id ?? 0, diseno: k, efecto: 'ninguno' }));
+      b.appendChild(crear('span', null, info.nombre));
+      b.addEventListener('click', () => {
+        c.diseno = k;
+        preview();
+      });
+      disenos.appendChild(b);
+    }
+  };
+
+  // Efecto holográfico
+  const efectos = crear('div', 'efectos-sel');
+  for (const [k, info] of Object.entries(EFECTOS)) {
+    const b = crear('button', 'efecto-op ef-' + k + (c.efecto === k ? ' activo' : ''));
+    b.type = 'button';
+    b.title = info.desc;
+    b.append(crear('span', 'muestra'), crear('b', null, info.nombre), crear('small', null, info.desc));
+    b.addEventListener('click', () => {
+      c.efecto = k;
+      efectos.querySelectorAll('button').forEach((x) => x.classList.toggle('activo', x === b));
+      preview();
+    });
+    efectos.appendChild(b);
+  }
+
   const limitada = interruptor('Edición limitada', c.limite_copias != null);
   const limite = entrada('number', c.limite_copias ?? 100, { min: Math.max(1, c.copias_emitidas || 1) });
   const campoLimite = campo('Número de copias', limite, c.copias_emitidas ? `Ya hay ${c.copias_emitidas} emitidas: no puede ser menor.` : 'Cuando se repartan todas, deja de salir en los sobres.');
@@ -342,6 +377,8 @@ function editarCarta(carta) {
   cuerpo.append(
     fila1,
     campo('Rareza', rarezas),
+    campo('Diseño', disenos),
+    campo('Efecto holográfico', efectos, '«Automático» pone brillo a las legendarias y holo a las divinas.'),
     campo('URL de la imagen', imagen, 'Sube la imagen a GitHub Pages (o similar) y pega aquí el enlace. Formato horizontal 5:4.'),
     campo('Texto / efecto', desc),
     campo('Frase', frase),
@@ -402,6 +439,7 @@ function editarCarta(carta) {
       const body = {
         nombre: c.nombre, coste: c.coste, rareza: c.rareza, imagen_url: c.imagen_url, descripcion: c.descripcion,
         frase: c.frase, artista: c.artista, grupo: c.grupo, limite_copias: c.limite_copias, activa: c.activa,
+        diseno: c.diseno, efecto: c.efecto,
       };
       if (nueva) await api('/api/admin/cartas', { method: 'POST', body });
       else await api('/api/admin/cartas', { method: 'PUT', body: { id: c.id, ...body } });
@@ -540,11 +578,14 @@ async function moverTipo(i, delta) {
   }
 }
 
+// ¿Puede salir esta carta en un sobre con estos grupos?
+function puedeSalir(carta, grupos) {
+  return carta.activa && (carta.limite_copias == null || (carta.copias_emitidas || 0) < carta.limite_copias) &&
+    (!grupos?.length || grupos.includes(carta.grupo || null));
+}
+
 // Calcula los % reales en el navegador (para la vista previa del editor)
-function realesLocales(probabilidades, grupos) {
-  const pool = datos.cartas.filter(
-    (c) => c.activa && (c.limite_copias == null || c.copias_emitidas < c.limite_copias) && (!grupos.length || grupos.includes(c.grupo)),
-  );
+function realesLocales(probabilidades, grupos, pool = datos.cartas.filter((c) => puedeSalir(c, grupos))) {
   const conCartas = new Set(pool.map((c) => c.rareza));
   const validas = Object.keys(RAREZAS).filter((r) => conCartas.has(r) && Number(probabilidades[r]) > 0);
   const total = validas.reduce((s, r) => s + Number(probabilidades[r]), 0);
@@ -631,8 +672,24 @@ function editarTipo(tipo) {
 
   const activo = interruptor('Activo', t.activo);
 
+  if (!t.efecto) t.efecto = 'brillo';
+  const efectosSobre = crear('div', 'efectos-sel');
+  for (const [k, info] of Object.entries(EFECTOS)) {
+    if (k === 'auto') continue;
+    const b = crear('button', 'efecto-op ef-' + k + (t.efecto === k ? ' activo' : ''));
+    b.type = 'button';
+    b.append(crear('span', 'muestra'), crear('b', null, info.nombre), crear('small', null, info.desc));
+    b.addEventListener('click', () => {
+      t.efecto = k;
+      efectosSobre.querySelectorAll('button').forEach((x) => x.classList.toggle('activo', x === b));
+      preview();
+    });
+    efectosSobre.appendChild(b);
+  }
+
   cuerpo.append(
     campo('Nombre', nombre),
+    campo('Efecto holográfico', efectosSobre),
     campo('Portada', imagen, 'Opcional. Imagen vertical (3:4). Si no pones nada se usa el diseño por defecto.'),
     campo('¿Cómo se consigue?', modo, '«Gratis con energía» aparece en Packs para todos. «Solo regalos» solo llega con tus drops.'),
     campo('Cartas boca abajo para elegir', num),
@@ -663,7 +720,7 @@ function editarTipo(tipo) {
     leerBasicos();
     guardar.disabled = true;
     try {
-      const body = { nombre: t.nombre, imagen_url: t.imagen_url, modo: t.modo, cartas_por_sobre: t.cartas_por_sobre, grupos: t.grupos, probabilidades: t.probabilidades, activo: t.activo, precio_polvo: t.precio_polvo };
+      const body = { nombre: t.nombre, imagen_url: t.imagen_url, modo: t.modo, cartas_por_sobre: t.cartas_por_sobre, grupos: t.grupos, probabilidades: t.probabilidades, activo: t.activo, precio_polvo: t.precio_polvo, efecto: t.efecto };
       if (nuevo) await api('/api/admin/tipos-sobre', { method: 'POST', body: { ...body, orden: datos.tipos.length } });
       else await api('/api/admin/tipos-sobre', { method: 'PUT', body: { id: t.id, ...body } });
       avisar('Sobre guardado');
@@ -998,4 +1055,73 @@ async function verEspectador(id) {
     $('regalo-login').focus();
   });
   pie.appendChild(regalar);
+}
+
+// =====================================================================
+// PROBABILIDAD DE APARICIÓN de una carta (editor de cartas)
+// =====================================================================
+function formatoPct(p) {
+  const pct = p * 100;
+  if (pct >= 10) return pct.toFixed(0) + '%';
+  if (pct >= 1) return pct.toFixed(1) + '%';
+  if (pct >= 0.1) return pct.toFixed(2) + '%';
+  return pct.toFixed(3) + '%';
+}
+
+function unoDeCada(p) {
+  if (p <= 0) return '—';
+  const n = Math.round(1 / p);
+  return n <= 1 ? 'casi siempre' : `1 de cada ${n.toLocaleString('es-ES')}`;
+}
+
+function tablaAparicion(c) {
+  const caja = crear('div', 'aparicion');
+  caja.appendChild(crear('div', 'prob-titulo', 'Probabilidad de aparición'));
+  const editada = { ...c, grupo: (c.grupo || '').trim() || null };
+  const tipos = datos.tipos.filter((t) => t.activo);
+  if (!tipos.length) {
+    caja.appendChild(crear('p', 'sub', 'Crea un sobre para ver con qué frecuencia saldrá esta carta.'));
+    return caja;
+  }
+
+  for (const t of tipos) {
+    const fila = crear('div', 'ap-fila');
+    const cab = crear('div', 'ap-cab');
+    cab.append(crear('b', null, t.nombre), crear('span', 'sub', `${t.cartas_por_sobre} cartas`));
+    fila.appendChild(cab);
+
+    const grupos = t.grupos || [];
+    let motivo = null;
+    if (!editada.activa) motivo = 'Desactivada: no sale en sobres';
+    else if (editada.limite_copias != null && (editada.copias_emitidas || 0) >= editada.limite_copias) motivo = 'Agotada';
+    else if (grupos.length && !grupos.includes(editada.grupo)) motivo = `No está en este sobre (grupos: ${grupos.join(', ')})`;
+
+    if (motivo) {
+      fila.appendChild(crear('div', 'ap-no', motivo));
+      caja.appendChild(fila);
+      continue;
+    }
+
+    const pool = datos.cartas.filter((x) => x.id !== editada.id && puedeSalir(x, grupos));
+    pool.push(editada);
+    const { reales } = realesLocales(t.probabilidades, grupos, pool);
+    const mismas = pool.filter((x) => x.rareza === editada.rareza).length;
+    const porHueco = (reales[editada.rareza] / 100) / mismas;
+    const enSobre = 1 - Math.pow(1 - porHueco, t.cartas_por_sobre);
+
+    const datosFila = crear('div', 'ap-datos');
+    const dato = (valor, texto, extra) => {
+      const d = crear('div');
+      d.append(crear('b', null, valor), crear('span', null, texto));
+      if (extra) d.appendChild(crear('small', null, extra));
+      datosFila.appendChild(d);
+    };
+    dato(formatoPct(porHueco), 'por carta boca abajo');
+    dato(formatoPct(enSobre), 'aparece en el sobre', unoDeCada(enSobre) + ' sobres');
+    dato(formatoPct(porHueco), 'conseguirla', unoDeCada(porHueco) + ' sobres');
+    fila.appendChild(datosFila);
+    fila.appendChild(crear('div', 'ap-nota', `${textoRareza(editada.rareza)}: ${reales[editada.rareza].toFixed(1)}% del sobre, repartido entre ${mismas} carta${mismas === 1 ? '' : 's'}`));
+    caja.appendChild(fila);
+  }
+  return caja;
 }

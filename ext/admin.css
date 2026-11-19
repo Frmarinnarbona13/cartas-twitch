@@ -195,3 +195,36 @@ textarea.input { resize: vertical; min-height: 60px; }
 .ficha-perfil .datos span { font-size: 10px; color: var(--texto-3); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .polvo-ajustes .campo { min-width: 80px; }
 .polvo-ajustes .input { width: 100%; }
+
+/* ---------------- Selectores de diseño y efecto ---------------- */
+.disenos-sel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.diseno-op { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; border-radius: 12px; border: 1px solid var(--borde-2); background: #0b0b0f; font-size: 12px; font-weight: 700; color: var(--texto-2); }
+.diseno-op .carta { width: 70px; pointer-events: none; }
+.diseno-op.activo { border-color: var(--morado); background: rgba(155, 92, 255, .14); color: #fff; }
+.efectos-sel { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.efecto-op { display: grid; grid-template-columns: 30px 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; text-align: left; padding: 7px 9px; border-radius: 10px; border: 1px solid var(--borde-2); background: #0b0b0f; color: var(--texto-2); }
+.efecto-op .muestra { grid-row: span 2; width: 30px; height: 30px; border-radius: 7px; background: #2a2a35; position: relative; overflow: hidden; }
+.efecto-op b { font-size: 12px; color: var(--texto); }
+.efecto-op small { font-size: 10px; color: var(--texto-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.efecto-op.activo { border-color: var(--morado); background: rgba(155, 92, 255, .14); }
+.ef-auto .muestra { background: conic-gradient(var(--r-comun), var(--r-rara), var(--r-epica), var(--r-legendaria), var(--r-divina), var(--r-comun)); }
+.ef-ninguno .muestra { background: #2a2a35; }
+.ef-brillo .muestra { background: linear-gradient(115deg, #3a3a48 30%, #fff 48%, #3a3a48 62%); background-size: 250% 100%; animation: brillo 2.4s ease-in-out infinite; }
+.ef-arcoiris .muestra { background: linear-gradient(125deg, #ff0096, #ffe600, #00ffaa, #00a0ff, #b400ff); background-size: 300% 300%; animation: holo-desliza 4s linear infinite; }
+.ef-galaxia .muestra { background: radial-gradient(circle, #fff 0 1px, transparent 1.5px) 0 0 / 9px 11px, radial-gradient(circle at 30% 30%, #7c3aed, #1e1b4b 70%); animation: titilar 2s ease-in-out infinite; }
+.ef-dorado .muestra { background: linear-gradient(115deg, #7a5200 20%, #ffd700 40%, #fff6c8 48%, #ffb300 58%, #7a5200 80%); background-size: 250% 100%; animation: brillo 2.4s ease-in-out infinite; }
+.ef-cristal .muestra { background: repeating-linear-gradient(60deg, #24304a 0 4px, #96dcff 5px, #ff96f0 7px, #24304a 9px); animation: tono 5s linear infinite; }
+
+/* ---------------- Probabilidad de aparición ---------------- */
+.aparicion { width: min(380px, 92%); }
+.ap-fila { padding: 10px 12px; border-radius: 12px; background: rgba(17, 17, 22, .9); border: 1px solid var(--borde); margin-bottom: 8px; }
+.ap-cab { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.ap-cab .sub { margin: 0; font-size: 11px; }
+.ap-datos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ap-datos div { text-align: center; padding: 6px 4px; border-radius: 8px; background: #0b0b0f; }
+.ap-datos b { display: block; font-family: var(--display); font-size: 15px; color: var(--morado-2); }
+.ap-datos span { display: block; font-size: 10px; color: var(--texto-2); line-height: 1.2; }
+.ap-datos small { display: block; font-size: 9px; color: var(--texto-3); margin-top: 2px; }
+.ap-nota { font-size: 10px; color: var(--texto-3); margin-top: 6px; }
+.ap-no { font-size: 12px; color: var(--ambar); }
+.cajon-preview { overflow-y: auto; justify-content: flex-start; padding-top: 40px; }

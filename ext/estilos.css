@@ -212,7 +212,6 @@ button { cursor: pointer; }
 .pack.con-imagen { background: transparent; box-shadow: none; overflow: visible; }
 .pack.con-imagen::before, .pack.con-imagen::after, .pack.con-imagen .diamante, .pack.con-imagen .pack-nombre { display: none; }
 .pack.con-imagen img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .7)); }
-.pack.con-imagen .brillo { display: none; }
 
 /* =====================================================================
    APERTURA DE SOBRE
@@ -308,3 +307,100 @@ button { cursor: pointer; }
   mix-blend-mode: color-dodge;
 }
 .carta.r-epica.activa .reflejo { opacity: .55; }
+
+/* =====================================================================
+   DISEÑOS DE CARTA
+   ===================================================================== */
+/* Arte completo: la ilustración ocupa toda la carta y el texto va encima */
+.carta.diseno-arte_completo .c-marco { background: #000; }
+.carta.diseno-arte_completo .c-arte { position: absolute; inset: 0; aspect-ratio: auto; border: none; z-index: 0; }
+.carta.diseno-arte_completo .c-cab { position: relative; z-index: 2; }
+.carta.diseno-arte_completo .c-texto {
+  position: relative; z-index: 2; margin-top: auto; flex: 0 0 auto; padding-top: 14cqw;
+  background: linear-gradient(180deg, transparent, rgba(5, 5, 8, .82) 38%, rgba(5, 5, 8, .92));
+  color: #fff;
+}
+.carta.diseno-arte_completo .c-desc { text-shadow: 0 1px 4px rgba(0, 0, 0, .8); }
+.carta.diseno-arte_completo .c-frase { color: #cfcbe0; }
+.carta.diseno-arte_completo .c-pie { position: relative; z-index: 2; background: rgba(5, 5, 8, .92); color: #fff; margin: 0; padding-left: 6cqw; padding-right: 6cqw; border-top-color: rgba(255, 255, 255, .22); }
+.carta.diseno-arte_completo .c-pie b { color: #fff; }
+.carta.diseno-arte_completo .c-limitada { top: 16.5cqw; bottom: auto; left: 2.5cqw; }
+.carta.diseno-arte_completo .c-nueva { top: 16.5cqw; }
+.carta.diseno-arte_completo .c-nueva ~ .c-limitada { top: 24cqw; }
+.carta.diseno-arte_completo .c-rareza { top: 16.5cqw; bottom: auto; right: 2.5cqw; }
+
+/* Minimalista: sin caja de texto, solo nombre, ilustración grande y número */
+.carta.diseno-minimalista .c-arte { flex: 1; aspect-ratio: auto; border-bottom: none; }
+.carta.diseno-minimalista .c-texto { display: none; }
+.carta.diseno-minimalista .c-pie { margin: 0; padding: 2cqw 4cqw; background: var(--c); color: #111; border-top: none; }
+.carta.diseno-minimalista .c-pie small { color: rgba(0, 0, 0, .55); }
+.carta.r-divina.diseno-minimalista .c-pie { background: transparent; }
+
+/* =====================================================================
+   EFECTOS HOLOGRÁFICOS (elegidos al crear la carta)
+   "auto" = según la rareza (brillo en legendarias, holo en divinas)
+   ===================================================================== */
+.carta.efecto-ninguno::after { content: none !important; }
+.carta.efecto-brillo::after,
+.carta.efecto-arcoiris::after,
+.carta.efecto-galaxia::after,
+.carta.efecto-dorado::after,
+.carta.efecto-cristal::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
+}
+.carta.efecto-brillo::after {
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .5) 45%, transparent 60%);
+  background-size: 250% 100%; mix-blend-mode: overlay; animation: brillo 3s ease-in-out infinite;
+}
+.carta.efecto-arcoiris::after {
+  background: linear-gradient(125deg, transparent 8%, rgba(255, 0, 150, .5) 22%, rgba(255, 230, 0, .45) 36%, rgba(0, 255, 170, .45) 50%, rgba(0, 160, 255, .5) 64%, rgba(180, 0, 255, .5) 78%, transparent 92%);
+  background-size: 300% 300%; mix-blend-mode: color-dodge; opacity: .6; animation: holo-desliza 5s linear infinite;
+}
+.carta.efecto-galaxia::after {
+  background:
+    radial-gradient(circle, #fff 0 1px, transparent 1.6px) 0 0 / 23px 29px,
+    radial-gradient(circle, #ffe9a8 0 .8px, transparent 1.4px) 11px 7px / 37px 31px,
+    radial-gradient(circle, #b8d8ff 0 1.2px, transparent 1.8px) 5px 17px / 53px 47px,
+    radial-gradient(ellipse at 30% 25%, rgba(140, 80, 255, .45), transparent 55%),
+    radial-gradient(ellipse at 75% 70%, rgba(255, 70, 180, .35), transparent 55%);
+  mix-blend-mode: screen; animation: titilar 2.4s ease-in-out infinite, deriva 18s linear infinite;
+}
+.carta.efecto-dorado { box-shadow: 0 0 0 1px rgba(255, 210, 63, .6), 0 4px 22px rgba(255, 190, 40, .55); }
+.carta.efecto-dorado::after {
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 200, 0, .55) 34%, rgba(255, 250, 210, .85) 44%, rgba(255, 170, 0, .55) 54%, transparent 68%);
+  background-size: 250% 100%; mix-blend-mode: overlay; animation: brillo 2.6s ease-in-out infinite;
+}
+.carta.efecto-cristal::after {
+  background: repeating-linear-gradient(60deg, transparent 0 5%, rgba(150, 220, 255, .38) 6.5%, rgba(255, 150, 240, .34) 8.5%, transparent 10.5%);
+  background-size: 200% 200%; mix-blend-mode: color-dodge; animation: holo-desliza 7s linear infinite, tono 6s linear infinite;
+}
+@keyframes holo-desliza { 0% { background-position: 0% 0%; } 100% { background-position: 300% 300%; } }
+@keyframes titilar { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes deriva { 0% { background-position: 0 0, 11px 7px, 5px 17px, 0 0, 0 0; } 100% { background-position: 23px 58px, 48px 69px, 58px 111px, 0 0, 0 0; } }
+@keyframes tono { to { filter: hue-rotate(360deg); } }
+
+/* Efectos en los sobres (la capa .brillo) */
+.pack .brillo { z-index: 2; }
+.pack.efecto-ninguno .brillo { display: none; }
+.pack.efecto-arcoiris .brillo {
+  background: linear-gradient(125deg, transparent 8%, rgba(255, 0, 150, .5) 22%, rgba(255, 230, 0, .45) 36%, rgba(0, 255, 170, .45) 50%, rgba(0, 160, 255, .5) 64%, rgba(180, 0, 255, .5) 78%, transparent 92%);
+  background-size: 300% 300%; mix-blend-mode: color-dodge; animation: holo-desliza 5s linear infinite;
+}
+.pack.efecto-galaxia .brillo {
+  background:
+    radial-gradient(circle, #fff 0 1px, transparent 1.6px) 0 0 / 23px 29px,
+    radial-gradient(circle, #ffe9a8 0 .8px, transparent 1.4px) 11px 7px / 37px 31px,
+    radial-gradient(ellipse at 30% 25%, rgba(140, 80, 255, .45), transparent 55%);
+  mix-blend-mode: screen; animation: titilar 2.4s ease-in-out infinite;
+}
+.pack.efecto-dorado .brillo {
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 200, 0, .55) 34%, rgba(255, 250, 210, .85) 44%, rgba(255, 170, 0, .55) 54%, transparent 68%);
+  background-size: 250% 100%; mix-blend-mode: overlay; animation: brillo 2.6s ease-in-out infinite;
+}
+.pack.efecto-cristal .brillo {
+  background: repeating-linear-gradient(60deg, transparent 0 5%, rgba(150, 220, 255, .38) 6.5%, rgba(255, 150, 240, .34) 8.5%, transparent 10.5%);
+  background-size: 200% 200%; mix-blend-mode: color-dodge; animation: holo-desliza 7s linear infinite, tono 6s linear infinite;
+}
+/* Con portada propia, el efecto se recorta a la forma de la imagen */
+.pack.con-imagen .brillo { display: block; }
+.pack.con-imagen.efecto-ninguno .brillo { display: none; }
