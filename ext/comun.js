@@ -93,6 +93,11 @@ const ICONOS = {
   cambio: '<path d="M4 8h14l-4-4M20 16H6l4 4"/>',
   check: '<path d="M5 12l5 5L20 7"/>',
   buscar: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  tienda: '<path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16M9 13h6"/>',
+  sonido: '<path d="M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+  silencio: '<path d="M11 5L6 9H3v6h3l5 4zM22 9l-6 6M16 9l6 6"/>',
+  polvo: '<path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2z"/>',
+  usuarios: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0M16 4.5a3.5 3.5 0 0 1 0 7M22 20a7 7 0 0 0-4-6.3"/>',
   candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
 };
 
@@ -230,3 +235,86 @@ function inclinable(carta) {
   });
   return envoltura;
 }
+
+
+// ------------------------------------------------------------------
+// Sonidos sintetizados (sin archivos de audio)
+// ------------------------------------------------------------------
+const Sonido = (() => {
+  let ctx = null;
+  let silencio = false;
+  try { silencio = localStorage.getItem('cartas-silencio') === '1'; } catch { /* sin almacenamiento */ }
+
+  function audio() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tono(frecuencia, inicio, duracion, forma = 'sine', volumen = 0.1, frecuenciaFinal) {
+    const a = audio();
+    const t = a.currentTime + inicio;
+    const osc = a.createOscillator();
+    const gan = a.createGain();
+    osc.type = forma;
+    osc.frequency.setValueAtTime(frecuencia, t);
+    if (frecuenciaFinal) osc.frequency.exponentialRampToValueAtTime(frecuenciaFinal, t + duracion);
+    gan.gain.setValueAtTime(0.0001, t);
+    gan.gain.exponentialRampToValueAtTime(volumen, t + 0.01);
+    gan.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
+    osc.connect(gan).connect(a.destination);
+    osc.start(t);
+    osc.stop(t + duracion + 0.05);
+  }
+
+  function ruido(inicio, duracion, volumen, frecuencia) {
+    const a = audio();
+    const t = a.currentTime + inicio;
+    const buffer = a.createBuffer(1, Math.ceil(a.sampleRate * duracion), a.sampleRate);
+    const datos = buffer.getChannelData(0);
+    for (let i = 0; i < datos.length; i++) datos[i] = Math.random() * 2 - 1;
+    const fuente = a.createBufferSource();
+    fuente.buffer = buffer;
+    const filtro = a.createBiquadFilter();
+    filtro.type = 'bandpass';
+    filtro.frequency.value = frecuencia;
+    const gan = a.createGain();
+    gan.gain.setValueAtTime(volumen, t);
+    gan.gain.exponentialRampToValueAtTime(0.0001, t + duracion);
+    fuente.connect(filtro).connect(gan).connect(a.destination);
+    fuente.start(t);
+  }
+
+  const NOTAS = { comun: [523], rara: [523, 659], epica: [523, 659, 784], legendaria: [523, 659, 784, 1047], divina: [523, 659, 784, 1047, 1319] };
+
+  const efectos = {
+    click: () => tono(880, 0, 0.06, 'triangle', 0.04),
+    temblor: () => { for (let i = 0; i < 6; i++) ruido(i * 0.16, 0.12, 0.05, 500 + i * 80); },
+    rasgar: () => { ruido(0, 0.4, 0.28, 2600); tono(320, 0, 0.35, 'sawtooth', 0.04, 70); },
+    carta: () => tono(500, 0, 0.09, 'triangle', 0.05, 760),
+    girar: () => ruido(0, 0.13, 0.12, 4200),
+    redoble: () => { for (let i = 0; i < 10; i++) ruido(i * 0.095, 0.06, 0.06 + i * 0.008, 260); },
+    revelar: (rareza) => {
+      const notas = NOTAS[rareza] || NOTAS.comun;
+      notas.forEach((f, i) => tono(f, i * 0.09, 0.55, 'triangle', 0.09));
+      if (rareza === 'legendaria' || rareza === 'divina') {
+        for (let i = 0; i < 8; i++) tono(1800 + Math.random() * 1600, 0.35 + i * 0.06, 0.25, 'sine', 0.025);
+      }
+    },
+    polvo: () => [1200, 1500, 1900, 2400].forEach((f, i) => tono(f, i * 0.05, 0.25, 'sine', 0.04)),
+    compra: () => { tono(988, 0, 0.12, 'square', 0.04); tono(1319, 0.1, 0.3, 'square', 0.04); },
+  };
+
+  return {
+    play(nombre, ...args) {
+      if (silencio) return;
+      try { efectos[nombre]?.(...args); } catch { /* el navegador no permite audio */ }
+    },
+    get silencio() { return silencio; },
+    alternar() {
+      silencio = !silencio;
+      try { localStorage.setItem('cartas-silencio', silencio ? '1' : '0'); } catch { /* sin almacenamiento */ }
+      return silencio;
+    },
+  };
+})();

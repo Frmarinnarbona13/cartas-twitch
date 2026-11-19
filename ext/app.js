@@ -40,6 +40,19 @@ $('pag-ant').appendChild(icono('izq'));
 $('pag-sig').appendChild(icono('der'));
 
 $('btn-compartir').addEventListener('click', () => Twitch.ext.actions.requestIdShare());
+function pintarBotonSonido() {
+  $('btn-sonido').innerHTML = '';
+  $('btn-sonido').appendChild(icono(Sonido.silencio ? 'silencio' : 'sonido'));
+  $('btn-sonido').title = Sonido.silencio ? 'Activar sonido' : 'Silenciar';
+}
+pintarBotonSonido();
+$('btn-sonido').addEventListener('click', () => {
+  Sonido.alternar();
+  pintarBotonSonido();
+  Sonido.play('click');
+});
+$('chip-polvo').addEventListener('click', () => irA('tienda'));
+$('btn-desmontar').addEventListener('click', () => asistenteDesmontar());
 $('btn-reintentar').addEventListener('click', cargar);
 $('btn-energia').addEventListener('click', explicarEnergia);
 
@@ -84,6 +97,9 @@ function irA(seccion, vista) {
   if (seccion === 'coleccion') {
     mostrarVista(estado.vista);
     if (estado.vista === 'album') pintarAlbum();
+  } else if (seccion === 'tienda') {
+    mostrarVista('tienda');
+    pintarTienda();
   } else if (seccion === 'cambios') {
     mostrarVista('cambios');
     cargarCambios();
@@ -121,6 +137,7 @@ async function cargar() {
     pintarReserva();
     $('total-cartas').textContent = datos.copias.length;
     pintarGloboCambios(datos.intercambios_pendientes);
+    pintarPolvo();
     irA(estado.seccion, estado.vista);
   } catch (e) {
     console.error(e);
@@ -401,6 +418,31 @@ function verDetalle(carta, mia) {
   zona.appendChild(lupa);
 
   capa.append(cerrar, info, zona);
+  const valor = estado.datos.polvo_por_rareza?.[carta.rareza] ?? 0;
+  const acciones = crear('div', 'acciones-detalle');
+  const desmontarBtn = crear('button', 'btn', `Desmontar 1 copia (+✦ ${valor})`);
+  desmontarBtn.title = mia.series.length > 1 ? 'Se desmonta la copia con el número de serie más alto' : 'Es tu única copia';
+  desmontarBtn.addEventListener('click', async () => {
+    if (!desmontarBtn.dataset.ok) {
+      desmontarBtn.dataset.ok = '1';
+      desmontarBtn.textContent = mia.series.length > 1 ? '¿Seguro? Pulsa otra vez' : '¡Es tu única copia! Pulsa otra vez';
+      setTimeout(() => { delete desmontarBtn.dataset.ok; desmontarBtn.textContent = `Desmontar 1 copia (+✦ ${valor})`; }, 3000);
+      return;
+    }
+    const copia = estado.datos.copias.filter((c) => c.carta_id === carta.id).sort((a, b) => b.numero_serie - a.numero_serie)[0];
+    desmontarBtn.disabled = true;
+    try {
+      const r = await api('/api/polvo/desmontar', { method: 'POST', body: { copias: [copia.id] } });
+      Sonido.play('polvo');
+      avisar(`✨ +${r.ganado} de polvo (tienes ${r.polvo})`);
+      capa.remove();
+      await cargar();
+    } catch (e) {
+      avisar(e.message, true);
+      desmontarBtn.disabled = false;
+    }
+  });
+  acciones.appendChild(desmontarBtn);
   const limite = carta.limite_copias ? '/' + carta.limite_copias : '';
   if (mia.series.length > 1 || carta.limite_copias) {
     capa.appendChild(crear('div', 'antetitulo', `Tienes ${mia.series.length} ${mia.series.length === 1 ? 'copia' : 'copias'}`));
@@ -408,6 +450,7 @@ function verDetalle(carta, mia) {
     [...mia.series].sort((a, b) => a - b).forEach((n) => series.appendChild(crear('span', null, '#' + n + limite)));
     capa.appendChild(series);
   }
+  capa.appendChild(acciones);
   $('app').appendChild(capa);
 }
 
@@ -865,5 +908,158 @@ function asistenteCambio() {
     }
     actualizar();
   }
+  pintar();
+}
+
+// ------------------------------------------------------------------
+// Polvo y tienda
+// ------------------------------------------------------------------
+function pintarPolvo() {
+  const polvo = estado.datos?.usuario?.polvo ?? 0;
+  $('polvo-texto').textContent = polvo.toLocaleString('es-ES');
+  $('saldo-polvo').textContent = polvo.toLocaleString('es-ES');
+}
+
+function pintarTienda() {
+  const { tienda, usuario, polvo_por_rareza } = estado.datos;
+  pintarPolvo();
+  const lista = $('lista-tienda');
+  lista.innerHTML = '';
+  $('tienda-vacio').classList.toggle('oculto', tienda.length > 0);
+  for (const t of tienda) {
+    const falta = t.precio_polvo - usuario.polvo;
+    const item = crear('button', 'item-pack' + (falta > 0 ? ' bloqueado' : ''));
+    item.appendChild(elementoPack(t));
+    item.appendChild(crear('div', 'nombre', t.nombre));
+    item.appendChild(crear('span', 'precio', t.precio_polvo.toLocaleString('es-ES')));
+    if (falta > 0) item.appendChild(crear('div', 'falta', `Te faltan ${falta.toLocaleString('es-ES')}`));
+    item.addEventListener('click', () => {
+      if (falta > 0) return avisar(`Te faltan ✦ ${falta} de polvo. Desmonta cartas repetidas para conseguirlo.`, true);
+      comprarSobre(t);
+    });
+    lista.appendChild(item);
+  }
+
+  const tabla = $('tabla-polvo');
+  tabla.innerHTML = '';
+  for (const [r, info] of Object.entries(RAREZAS)) {
+    const celda = crear('div', 'r-' + r);
+    celda.append(crear('b', null, '✦ ' + (polvo_por_rareza?.[r] ?? 0)), crear('span', null, info.nombre));
+    tabla.appendChild(celda);
+  }
+}
+
+async function comprarSobre(tipo) {
+  let sobreId = null;
+  await lanzarApertura(tipo, async () => {
+    const r = await api('/api/tienda/comprar', { method: 'POST', body: { tipo_sobre_id: tipo.id } });
+    Sonido.play('compra');
+    estado.datos.usuario.polvo = r.polvo;
+    pintarPolvo();
+    sobreId = r.sobre_id;
+    return api('/api/sobres/abrir', { method: 'POST', body: { sobre_id: sobreId } });
+  }, () => sobreId);
+}
+
+// Elegir qué copias desmontar. Por defecto: todas las repetidas
+// (se queda la copia con el número de serie más bajo de cada carta).
+function asistenteDesmontar() {
+  const porId = new Map(estado.datos.catalogo.map((c) => [c.id, c]));
+  const valores = estado.datos.polvo_por_rareza || {};
+  const copias = estado.datos.copias
+    .map((c) => ({ ...c, carta: porId.get(c.carta_id) }))
+    .filter((c) => c.carta)
+    .sort((a, b) => RAREZAS[a.carta.rareza].orden - RAREZAS[b.carta.rareza].orden || a.carta.id - b.carta.id || a.numero_serie - b.numero_serie);
+
+  const repetidas = () => {
+    const vistas = new Set();
+    const ids = new Set();
+    for (const c of copias) {
+      if (vistas.has(c.carta_id)) ids.add(c.id);
+      vistas.add(c.carta_id);
+    }
+    return ids;
+  };
+  let elegidas = repetidas();
+
+  const capa = crear('div', 'asistente');
+  const cab = crear('div', 'asistente-cab');
+  const cerrar = crear('button', 'btn redondo fantasma');
+  cerrar.appendChild(icono('cerrar'));
+  cerrar.addEventListener('click', () => capa.remove());
+  cab.append(crear('h3', null, 'Desmontar cartas'), cerrar);
+  const cuerpo = crear('div', 'asistente-cuerpo');
+  const pie = crear('div', 'asistente-pie');
+  const boton = crear('button', 'btn primario');
+  boton.style.flex = '1';
+  pie.appendChild(boton);
+  capa.append(cab, cuerpo, pie);
+  $('app').appendChild(capa);
+
+  cuerpo.appendChild(crear('p', 'gris pequeno', 'Toca las cartas para elegir cuáles desmontar. Ya están marcadas tus repetidas (te quedas siempre la de número más bajo).'));
+  const atajos = crear('div', 'atajos');
+  const atajo = (texto, fn) => {
+    const b = crear('button', 'chip', texto);
+    b.addEventListener('click', () => { elegidas = fn(); pintar(); });
+    atajos.appendChild(b);
+  };
+  atajo('Solo repetidas', repetidas);
+  atajo('Repetidas comunes', () => new Set([...repetidas()].filter((id) => copias.find((c) => c.id === id).carta.rareza === 'comun')));
+  atajo('Ninguna', () => new Set());
+  const resumen = crear('div', 'resumen-desmontar');
+  const rejilla = crear('div', 'rejilla-sel');
+  cuerpo.append(atajos, resumen, rejilla);
+
+  function pintar() {
+    rejilla.innerHTML = '';
+    for (const c of copias) {
+      const item = crear('div', 'sel-carta' + (elegidas.has(c.id) ? ' sel' : ''));
+      item.appendChild(elementoCarta(c.carta, { serie: c.numero_serie }));
+      item.appendChild(crear('div', 'marca-sel'));
+      const tick = crear('div', 'tick');
+      tick.appendChild(icono('check'));
+      item.appendChild(tick);
+      item.addEventListener('click', () => {
+        elegidas.has(c.id) ? elegidas.delete(c.id) : elegidas.add(c.id);
+        pintar();
+      });
+      rejilla.appendChild(item);
+    }
+    if (!copias.length) rejilla.appendChild(crear('p', 'gris', 'No tienes cartas.'));
+
+    const total = [...elegidas].reduce((s, id) => s + (valores[copias.find((c) => c.id === id).carta.rareza] ?? 0), 0);
+    // ¿Alguna carta se queda sin ninguna copia?
+    const perdidas = new Set();
+    for (const c of copias) {
+      if (!elegidas.has(c.id)) continue;
+      const quedan = copias.filter((x) => x.carta_id === c.carta_id && !elegidas.has(x.id)).length;
+      if (!quedan) perdidas.add(c.carta.nombre);
+    }
+    resumen.innerHTML = '';
+    resumen.append(`${elegidas.size} ${elegidas.size === 1 ? 'carta elegida' : 'cartas elegidas'} → recibirás `, crear('b', null, `✦ ${total.toLocaleString('es-ES')}`));
+    if (perdidas.size) resumen.appendChild(crear('div', 'peligro', `⚠ Te quedarás sin: ${[...perdidas].join(', ')}`));
+    boton.textContent = elegidas.size ? `Desmontar ${elegidas.size} (+✦ ${total.toLocaleString('es-ES')})` : 'Elige cartas';
+    boton.disabled = !elegidas.size;
+    delete boton.dataset.ok;
+  }
+
+  boton.addEventListener('click', async () => {
+    if (!boton.dataset.ok) {
+      boton.dataset.ok = '1';
+      boton.textContent = '¿Seguro? No se puede deshacer. Pulsa otra vez';
+      return;
+    }
+    boton.disabled = true;
+    try {
+      const r = await api('/api/polvo/desmontar', { method: 'POST', body: { copias: [...elegidas] } });
+      Sonido.play('polvo');
+      avisar(`✨ +${r.ganado.toLocaleString('es-ES')} de polvo. Ahora tienes ${r.polvo.toLocaleString('es-ES')}`);
+      capa.remove();
+      await cargar();
+    } catch (e) {
+      avisar(e.message, true);
+      boton.disabled = false;
+    }
+  });
   pintar();
 }

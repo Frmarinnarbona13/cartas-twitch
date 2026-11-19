@@ -45,11 +45,13 @@ function reproducirApertura(contenedor, opciones) {
 
       await new Promise((ok) => zonaSobre.addEventListener('click', ok, { once: true }));
       zonaSobre.classList.replace('flotando', 'temblando');
+      Sonido.play('temblor');
       texto.textContent = 'Abriendo…';
 
       const [datos] = await Promise.all([opciones.preparar(), esperar(1100)]);
 
       zonaSobre.classList.replace('temblando', 'rasgando');
+      Sonido.play('rasgar');
       texto.classList.add('oculto');
       await esperar(650);
       flash('rgba(255,255,255,.9)');
@@ -82,6 +84,7 @@ function reproducirApertura(contenedor, opciones) {
       for (const h of huecos) {
         await esperar(90);
         h.classList.add('visible');
+        Sonido.play('carta');
       }
       fila.classList.add('eligiendo');
 
@@ -89,6 +92,7 @@ function reproducirApertura(contenedor, opciones) {
         huecos.forEach((h, i) => h.addEventListener('click', () => ok(i + 1), { once: true }));
       });
       fila.classList.remove('eligiendo');
+      Sonido.play('click');
       cerrarBtn.classList.add('oculto'); // ya no se puede cerrar a medias
       const elegido = huecos[posicion - 1];
       elegido.classList.add('elegida');
@@ -107,6 +111,7 @@ function reproducirApertura(contenedor, opciones) {
       for (let i = 0; i < huecos.length; i++) {
         if (i === posicion - 1) continue;
         huecos[i].classList.add('revelada');
+        Sonido.play('girar');
         await esperar(420);
         huecos[i].classList.add('descartada');
       }
@@ -115,6 +120,7 @@ function reproducirApertura(contenedor, opciones) {
       titulo.textContent = 'Y tu carta es…';
       await esperar(250);
       elegido.classList.add('redoble');
+      Sonido.play('redoble');
       await esperar(1000);
       elegido.classList.remove('redoble', 'elegida');
       elegido.classList.add('revelada', 'ganadora');
@@ -122,6 +128,7 @@ function reproducirApertura(contenedor, opciones) {
       const carta = eleccion.cartas[posicion - 1];
       const colores = { comun: '#d4d6dd', rara: '#4f9dff', epica: '#b061ff', legendaria: '#f7b928', divina: '#ffffff' };
       flash(colores[carta.rareza] || '#fff');
+      Sonido.play('revelar', carta.rareza);
       if (carta.rareza === 'legendaria' || carta.rareza === 'divina' || carta.rareza === 'epica') {
         particulas(elegido, carta.rareza === 'divina' ? 60 : carta.rareza === 'legendaria' ? 40 : 22);
       }

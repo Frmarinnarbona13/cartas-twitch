@@ -174,3 +174,24 @@ textarea.input { resize: vertical; min-height: 60px; }
   .sobre-fila { grid-template-columns: 80px 1fr; }
   .acciones-fila { grid-column: 1 / -1; }
 }
+
+/* ---------------- Espectadores ---------------- */
+.tabla-contenedor { padding: 0; overflow-x: auto; }
+.tabla-espectadores { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla-espectadores th { text-align: left; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--texto-3); padding: 12px 14px; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+.tabla-espectadores td { padding: 10px 14px; border-bottom: 1px solid #1b1b23; white-space: nowrap; }
+.tabla-espectadores tbody tr { cursor: pointer; }
+.tabla-espectadores tbody tr:hover td { background: #15151c; }
+.tabla-espectadores .quien { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.tabla-espectadores .av { width: 28px; height: 28px; border-radius: 50%; background: var(--degradado); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; }
+.tabla-espectadores .en-linea { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, .2); }
+.mini-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; }
+.ficha-perfil { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.ficha-perfil .av { width: 84px; height: 84px; border-radius: 50%; background: var(--degradado); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 34px; }
+.ficha-perfil h3 { margin: 0; font-family: var(--display); font-size: 22px; }
+.ficha-perfil .datos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(320px, 100%); }
+.ficha-perfil .datos div { padding: 10px; border-radius: 10px; background: rgba(17, 17, 22, .9); border: 1px solid var(--borde); }
+.ficha-perfil .datos b { display: block; font-family: var(--display); font-size: 18px; }
+.ficha-perfil .datos span { font-size: 10px; color: var(--texto-3); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.polvo-ajustes .campo { min-width: 80px; }
+.polvo-ajustes .input { width: 100%; }

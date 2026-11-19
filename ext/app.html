@@ -20,6 +20,8 @@
         <span class="energia-reloj" id="energia-reloj"></span>
       </div>
       <div class="total-cartas"><b id="total-cartas">0</b><span>CARTAS</span></div>
+      <button class="chip-polvo" id="chip-polvo" title="Tu polvo"><span id="polvo-texto">0</span></button>
+      <button class="btn-sonido" id="btn-sonido" title="Sonido"></button>
     </header>
 
     <main id="contenido">
@@ -101,6 +103,28 @@
         </div>
       </section>
 
+      <!-- TIENDA -->
+      <section class="vista" id="v-tienda">
+        <div class="top-cab">
+          <h2 class="titulo-display">Tienda</h2>
+          <p class="gris pequeno">Cambia tus cartas repetidas por polvo y úsalo para comprar sobres.</p>
+        </div>
+        <div class="saldo">
+          <div><div class="antetitulo">Tu polvo</div><b id="saldo-polvo">0</b></div>
+          <div class="saldo-icono"></div>
+        </div>
+        <div class="seccion-cab"><div class="antetitulo">Sobres a la venta</div></div>
+        <div class="rejilla-packs" id="lista-tienda"></div>
+        <div class="vacio oculto" id="tienda-vacio"><p>Ahora mismo no hay sobres a la venta.</p></div>
+
+        <div class="seccion-cab" style="margin-top:22px"><div class="antetitulo">Conseguir polvo</div></div>
+        <div class="tarjeta-polvo">
+          <p class="gris pequeno">Desmonta cartas que no quieras y recibe polvo según su rareza:</p>
+          <div class="tabla-polvo" id="tabla-polvo"></div>
+          <button class="btn primario btn-grande" id="btn-desmontar">Desmontar cartas</button>
+        </div>
+      </section>
+
       <!-- CAMBIOS (intercambios) -->
       <section class="vista" id="v-cambios">
         <div class="top-cab">
@@ -157,6 +181,7 @@
       </div>
       <nav class="nav-inferior" id="nav-inferior">
         <button data-seccion="coleccion" class="activo"><span class="ico-nav" data-ico="coleccion"></span>Colección</button>
+        <button data-seccion="tienda"><span class="ico-nav" data-ico="tienda"></span>Tienda</button>
         <button data-seccion="cambios"><span class="ico-nav" data-ico="cambio"></span>Cambios<span class="globo nav-globo oculto" id="globo-cambios">0</span></button>
         <button data-seccion="top"><span class="ico-nav" data-ico="top"></span>Top</button>
         <button data-seccion="perfil"><span class="ico-nav" data-ico="perfil"></span>Perfil</button>

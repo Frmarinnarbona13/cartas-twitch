@@ -23,6 +23,7 @@
         <button data-sec="simulador" data-ico="mando">Simulador</button>
         <div class="menu-grupo">Directo</div>
         <button data-sec="drops" data-ico="regalo">Drops y regalos</button>
+        <button data-sec="espectadores" data-ico="usuarios">Espectadores</button>
         <div class="menu-grupo">Canal</div>
         <button data-sec="ajustes" data-ico="ajustes">Ajustes</button>
       </nav>
@@ -133,6 +134,7 @@
               <div class="segmentado" id="regalo-que">
                 <button data-v="sobre" class="activo">Sobre</button>
                 <button data-v="carta">Carta concreta</button>
+                <button data-v="polvo">Polvo</button>
               </div>
             </div>
             <div class="campo" id="campo-regalo-sobre">
@@ -167,6 +169,24 @@
         </div>
       </section>
 
+      <!-- ================= ESPECTADORES ================= -->
+      <section class="seccion" id="s-espectadores">
+        <header class="cab">
+          <div>
+            <div class="antetitulo">Directo</div>
+            <h1 class="titulo-display">Espectadores</h1>
+            <p class="sub">Quién colecciona en tu canal y qué tiene.</p>
+          </div>
+          <input type="search" id="buscar-espectador" class="input" placeholder="Buscar espectador…">
+        </header>
+        <div class="tarjeta tabla-contenedor">
+          <table class="tabla-espectadores">
+            <thead><tr><th>Espectador</th><th>Cartas</th><th>Distintas</th><th>Sobres abiertos</th><th>Sin abrir</th><th>Polvo</th><th>Última vez</th></tr></thead>
+            <tbody id="tabla-espectadores"></tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- ================= AJUSTES ================= -->
       <section class="seccion" id="s-ajustes">
         <header class="cab">
@@ -195,6 +215,10 @@
           </div>
           <div class="nota" id="aj-resumen"></div>
           <div class="nota ambar">Cuando tu canal sea afiliado podremos dar más energía a los subs (recarga más rápida y más máximo).</div>
+          <h2 class="separado">Polvo por rareza</h2>
+          <p class="sub">Lo que recibe un espectador al desmontar una carta. Ponles precio a los sobres en «Sobres» para venderlos en la tienda.</p>
+          <div class="fila polvo-ajustes" id="aj-polvo" style="margin-top:12px"></div>
+
           <h2 class="separado">Alertas en directo (OBS)</h2>
           <p class="sub">Cuando alguien consiga una carta buena, aparecerá en tu directo. En OBS: Fuentes → + → Navegador → pega la URL (ancho 800, alto 600).</p>
           <div class="campo" style="margin-top:12px">

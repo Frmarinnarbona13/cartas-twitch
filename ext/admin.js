@@ -43,6 +43,7 @@ function irA(seccion) {
   document.querySelectorAll('#menu button').forEach((b) => b.classList.toggle('activo', b.dataset.sec === seccion));
   document.querySelectorAll('.seccion').forEach((s) => s.classList.toggle('activa', s.id === 's-' + seccion));
   if (seccion === 'resumen') cargarResumen().catch(() => {});
+  if (seccion === 'espectadores') cargarEspectadores();
   window.scrollTo({ top: 0 });
 }
 
@@ -485,6 +486,7 @@ function pintarTipos() {
       `${t.cartas_por_sobre} cartas boca abajo · ${enPool} cartas posibles`,
     );
     if (t.grupos?.length) meta.append(' · Grupos: ' + t.grupos.join(', '));
+    if (t.precio_polvo) meta.appendChild(crear('span', 'badge gris', `Tienda: ✦ ${t.precio_polvo}`));
     if (!t.activo) meta.appendChild(crear('span', 'badge gris', 'Desactivado'));
     centro.appendChild(meta);
     centro.appendChild(barraProbabilidad(t.reales));
@@ -576,6 +578,7 @@ function editarTipo(tipo) {
   const nombre = entrada('text', t.nombre, { maxLength: 40, placeholder: 'Ej: Sobre Normal' });
   const imagen = entrada('url', t.imagen_url, { placeholder: 'https://… (opcional)' });
   const num = entrada('number', t.cartas_por_sobre, { min: 1, max: 10 });
+  const precio = entrada('number', t.precio_polvo ?? '', { min: 1, placeholder: 'No se vende' });
 
   const modo = crear('div', 'segmentado');
   for (const [v, txt] of [['energia', 'Gratis con energía'], ['regalo', 'Solo regalos y drops']]) {
@@ -633,6 +636,7 @@ function editarTipo(tipo) {
     campo('Portada', imagen, 'Opcional. Imagen vertical (3:4). Si no pones nada se usa el diseño por defecto.'),
     campo('¿Cómo se consigue?', modo, '«Gratis con energía» aparece en Packs para todos. «Solo regalos» solo llega con tus drops.'),
     campo('Cartas boca abajo para elegir', num),
+    campo('Precio en la tienda (polvo)', precio, 'Vacío = no se vende en la tienda.'),
     campo('Qué cartas contiene', grupos, 'Marca grupos para limitar el sobre. Sin marcar = todas las cartas.'),
     campo('Probabilidad por rareza (pesos)', probs, 'La columna gris es el % real teniendo en cuenta las cartas disponibles.'),
     campo(null, activo.el),
@@ -642,10 +646,11 @@ function editarTipo(tipo) {
     t.nombre = nombre.value;
     t.imagen_url = imagen.value.trim();
     t.cartas_por_sobre = Number(num.value || 5);
+    t.precio_polvo = precio.value === '' ? null : Number(precio.value);
     t.activo = activo.input.checked;
     preview();
   };
-  [nombre, imagen, num].forEach((el) => el.addEventListener('input', leerBasicos));
+  [nombre, imagen, num, precio].forEach((el) => el.addEventListener('input', leerBasicos));
   activo.input.addEventListener('change', leerBasicos);
   preview();
 
@@ -658,7 +663,7 @@ function editarTipo(tipo) {
     leerBasicos();
     guardar.disabled = true;
     try {
-      const body = { nombre: t.nombre, imagen_url: t.imagen_url, modo: t.modo, cartas_por_sobre: t.cartas_por_sobre, grupos: t.grupos, probabilidades: t.probabilidades, activo: t.activo };
+      const body = { nombre: t.nombre, imagen_url: t.imagen_url, modo: t.modo, cartas_por_sobre: t.cartas_por_sobre, grupos: t.grupos, probabilidades: t.probabilidades, activo: t.activo, precio_polvo: t.precio_polvo };
       if (nuevo) await api('/api/admin/tipos-sobre', { method: 'POST', body: { ...body, orden: datos.tipos.length } });
       else await api('/api/admin/tipos-sobre', { method: 'PUT', body: { id: t.id, ...body } });
       avisar('Sobre guardado');
@@ -749,6 +754,9 @@ function pintarEstadistica(sim) {
 const regaloQue = segmentado('regalo-que', (v) => {
   $('campo-regalo-sobre').classList.toggle('oculto', v !== 'sobre');
   $('campo-regalo-carta').classList.toggle('oculto', v !== 'carta');
+  $('regalo-cantidad').max = v === 'polvo' ? 100000 : 20;
+  if (v === 'polvo' && Number($('regalo-cantidad').value) < 10) $('regalo-cantidad').value = 100;
+  if (v !== 'polvo' && Number($('regalo-cantidad').value) > 20) $('regalo-cantidad').value = 1;
 });
 const regaloDestino = segmentado('regalo-destino', (v) => $('campo-regalo-login').classList.toggle('oculto', v !== 'usuario'));
 
@@ -825,6 +833,13 @@ async function cargarAjustes() {
   $('aj-recarga').value = datos.ajustes.energia_recarga_min;
   $('marca-nombre').textContent = datos.ajustes.nombre_coleccion;
   $('aj-rareza-alerta').value = datos.ajustes.alerta_rareza_min;
+  const cajaPolvo = $('aj-polvo');
+  cajaPolvo.innerHTML = '';
+  for (const [r, info] of Object.entries(RAREZAS)) {
+    const input = entrada('number', datos.ajustes.polvo_por_rareza?.[r] ?? 0, { min: 0, max: 100000 });
+    input.dataset.rareza = r;
+    cajaPolvo.appendChild(campo(info.nombre, input));
+  }
   pintarUrlAlertas();
   resumenAjustes();
 }
@@ -881,6 +896,7 @@ $('btn-guardar-ajustes').addEventListener('click', async () => {
         energia_max: Number($('aj-max').value),
         energia_recarga_min: Number($('aj-recarga').value),
         alerta_rareza_min: $('aj-rareza-alerta').value,
+        polvo_por_rareza: Object.fromEntries([...$('aj-polvo').querySelectorAll('input')].map((i) => [i.dataset.rareza, Number(i.value || 0)])),
       },
     })).ajustes;
     $('marca-nombre').textContent = datos.ajustes.nombre_coleccion;
@@ -891,3 +907,95 @@ $('btn-guardar-ajustes').addEventListener('click', async () => {
     boton.disabled = false;
   }
 });
+
+// =====================================================================
+// ESPECTADORES
+// =====================================================================
+let busquedaEspectador;
+$('buscar-espectador').addEventListener('input', () => {
+  clearTimeout(busquedaEspectador);
+  busquedaEspectador = setTimeout(cargarEspectadores, 300);
+});
+
+async function cargarEspectadores() {
+  try {
+    const { usuarios } = await api('/api/admin/usuarios?q=' + encodeURIComponent($('buscar-espectador').value.trim()));
+    const cuerpo = $('tabla-espectadores');
+    cuerpo.innerHTML = '';
+    if (!usuarios.length) {
+      const tr = crear('tr');
+      const td = crear('td', 'sub', 'Todavía no hay espectadores (o ninguno coincide con la búsqueda).');
+      td.colSpan = 7;
+      tr.appendChild(td);
+      cuerpo.appendChild(tr);
+    }
+    for (const u of usuarios) {
+      const tr = crear('tr');
+      const quien = crear('div', 'quien');
+      const nombre = u.nombre || u.login || u.twitch_id;
+      quien.append(crear('span', 'av', nombre.charAt(0).toUpperCase()), nombre);
+      const enLinea = u.ultimo_visto && Date.now() - new Date(u.ultimo_visto).getTime() < 10 * 60 * 1000;
+      if (enLinea) quien.appendChild(crear('span', 'en-linea'));
+      const td = crear('td');
+      td.appendChild(quien);
+      tr.append(
+        td,
+        crear('td', null, String(u.cartas)),
+        crear('td', null, String(u.distintas)),
+        crear('td', null, String(u.sobres_abiertos)),
+        crear('td', null, String(u.sobres_sin_abrir)),
+        crear('td', null, '✦ ' + u.polvo),
+        crear('td', 'sub', u.ultimo_visto ? hace(u.ultimo_visto) : '—'),
+      );
+      tr.addEventListener('click', () => verEspectador(u.twitch_id));
+      cuerpo.appendChild(tr);
+    }
+  } catch (e) {
+    avisar(e.message, true);
+  }
+}
+
+async function verEspectador(id) {
+  let d;
+  try {
+    d = await api('/api/admin/usuarios/detalle?id=' + encodeURIComponent(id));
+  } catch (e) {
+    return avisar(e.message, true);
+  }
+  const u = d.usuario;
+  const nombre = u.nombre || u.login || u.twitch_id;
+  cajon.abrir({ titulo: nombre, sub: u.login ? '@' + u.login : '' });
+
+  const ficha = crear('div', 'ficha-perfil');
+  ficha.append(crear('div', 'av', nombre.charAt(0).toUpperCase()), crear('h3', null, nombre));
+  const datosU = crear('div', 'datos');
+  const distintas = new Set(d.copias.map((c) => c.cartas?.id)).size;
+  for (const [v, t] of [[d.copias.length, 'Cartas'], [distintas, 'Distintas'], ['✦ ' + u.polvo, 'Polvo'], [d.sobres.length, 'Sobres sin abrir']]) {
+    const caja = crear('div');
+    caja.append(crear('b', null, String(v)), crear('span', null, t));
+    datosU.appendChild(caja);
+  }
+  ficha.appendChild(datosU);
+  ficha.appendChild(crear('div', 'sub', `Se unió el ${fechaCorta(u.creado_en)} · última vez ${u.ultimo_visto ? hace(u.ultimo_visto) : '—'}`));
+  $('cajon-preview').appendChild(ficha);
+
+  const cuerpo = $('cajon-cuerpo');
+  cuerpo.appendChild(crear('div', 'etiqueta', `Colección (${d.copias.length})`));
+  const rejilla = crear('div', 'mini-rejilla');
+  rejilla.style.marginTop = '10px';
+  for (const c of d.copias) if (c.cartas) rejilla.appendChild(elementoCarta(c.cartas, { serie: c.numero_serie }));
+  if (!d.copias.length) rejilla.appendChild(crear('p', 'sub', 'Aún no tiene cartas.'));
+  cuerpo.appendChild(rejilla);
+
+  const pie = $('cajon-pie');
+  pie.appendChild(crear('div', 'espacio'));
+  const regalar = crear('button', 'btn primario', '🎁 Regalarle algo');
+  regalar.addEventListener('click', () => {
+    cajon.cerrar();
+    irA('drops');
+    $('regalo-destino').querySelector('[data-v=usuario]').click();
+    $('regalo-login').value = u.login || '';
+    $('regalo-login').focus();
+  });
+  pie.appendChild(regalar);
+}

@@ -14,6 +14,8 @@ const RUTAS = {
   'sobres/abrir':      { POST: publico.abrir },
   'sobres/elegir':     { POST: publico.elegir },
   'alertas':           { GET: publico.alertas },
+  'polvo/desmontar':   { POST: publico.desmontar },
+  'tienda/comprar':    { POST: publico.comprar },
 
   'intercambios':             { GET: intercambios.listar, POST: intercambios.crear },
   'intercambios/responder':   { POST: intercambios.responder },
@@ -27,6 +29,8 @@ const RUTAS = {
   'admin/ajustes':     { GET: admin.ajustes, PUT: admin.ajustes },
   'admin/resumen':     { GET: admin.resumen },
   'admin/simular':     { POST: admin.simular },
+  'admin/usuarios':    { GET: admin.usuarios },
+  'admin/usuarios/detalle': { GET: admin.usuarioDetalle },
 };
 
 export default function router(req, res) {

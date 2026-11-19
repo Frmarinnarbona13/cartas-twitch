@@ -209,3 +209,36 @@ html, body { height: 100%; overflow: hidden; }
 .sel-carta .tick svg { width: 14px; height: 14px; }
 .sel-carta.sel .tick { display: flex; }
 .contador-sel { font-size: 12px; font-weight: 800; color: var(--morado-2); }
+
+/* ---------------- Polvo, sonido y tienda ---------------- */
+.chip-polvo { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 7px; border-radius: 999px; background: rgba(155, 92, 255, .14); border: 1px solid rgba(155, 92, 255, .4); color: var(--morado-2); font-weight: 900; font-size: 12px; }
+.chip-polvo::before { content: "✦"; color: #ffd23f; }
+.btn-sonido { background: none; border: none; padding: 2px; color: var(--texto-3); display: flex; }
+.btn-sonido .ico svg { width: 17px; height: 17px; }
+.btn-sonido:hover { color: var(--texto); }
+.saldo { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 14px; margin-bottom: 16px; background: linear-gradient(120deg, rgba(147, 51, 234, .25), rgba(236, 72, 153, .12)); border: 1px solid rgba(155, 92, 255, .4); }
+.saldo b { font-family: var(--display); font-size: 30px; display: block; margin-top: 2px; }
+.saldo b::before { content: "✦ "; color: #ffd23f; }
+.saldo-icono { font-size: 34px; filter: drop-shadow(0 0 12px rgba(255, 210, 63, .6)); }
+.saldo-icono::before { content: "✨"; }
+.item-pack .precio { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 900; padding: 4px 11px; border-radius: 999px; background: linear-gradient(90deg, #9333ea, #db2777); color: #fff; }
+.item-pack .precio::before { content: "✦"; color: #ffd23f; }
+.item-pack.bloqueado .precio { background: var(--fondo-3); color: var(--texto-3); }
+.item-pack .falta { font-size: 10px; color: var(--texto-3); margin-top: -4px; }
+.tarjeta-polvo { padding: 14px; border-radius: 14px; background: var(--fondo-1); border: 1px solid var(--borde); }
+.tarjeta-polvo p { margin: 0 0 10px; }
+.tabla-polvo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
+.tabla-polvo div { text-align: center; padding: 8px 4px; border-radius: 10px; background: var(--fondo-2); border-top: 2px solid var(--c); }
+.tabla-polvo b { display: block; font-size: 14px; }
+.tabla-polvo span { font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--texto-3); font-weight: 800; }
+.resumen-desmontar { padding: 10px 12px; border-radius: 12px; background: var(--fondo-1); border: 1px solid var(--borde); margin-top: 10px; font-size: 12px; }
+.resumen-desmontar b { color: #ffd23f; }
+.resumen-desmontar .peligro { color: #fbbf24; margin-top: 6px; }
+.atajos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.detalle .acciones-detalle { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+@media (max-width: 360px) {
+  .nav-inferior button { padding: 6px 8px; font-size: 9px; }
+  .tabla-polvo { grid-template-columns: repeat(3, 1fr); }
+  .chip-polvo { font-size: 11px; padding: 2px 7px 2px 5px; }
+}
