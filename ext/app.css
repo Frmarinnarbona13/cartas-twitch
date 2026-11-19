@@ -66,7 +66,7 @@ html, body { height: 100%; overflow: hidden; }
 }
 .hueco-album { position: relative; cursor: pointer; transition: transform .15s; }
 .hueco-album:hover { transform: translateY(-3px); }
-.hueco-album .multi { position: absolute; top: 18%; right: 6%; z-index: 4; background: rgba(10, 10, 13, .85); color: #fff; font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .25); }
+.hueco-album .multi { position: absolute; top: 42%; left: 6%; z-index: 4; background: rgba(10, 10, 13, .85); color: #fff; font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .25); }
 .hueco-vacio { aspect-ratio: 5 / 7; border-radius: 7%/5%; border: 1px dashed #2c2c36; background: rgba(255, 255, 255, .015); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #3c3c48; font-weight: 800; font-size: 12px; cursor: default; }
 .hueco-vacio::before { content: "?"; font-family: var(--display); font-size: 22px; }
 
@@ -241,4 +241,37 @@ html, body { height: 100%; overflow: hidden; }
   .nav-inferior button { padding: 6px 8px; font-size: 9px; }
   .tabla-polvo { grid-template-columns: repeat(3, 1fr); }
   .chip-polvo { font-size: 11px; padding: 2px 7px 2px 5px; }
+}
+
+/* ---------------- Certificación ---------------- */
+.estado-directo { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; background: var(--fondo-1); border: 1px solid var(--borde); margin-bottom: 12px; font-size: 12px; font-weight: 700; }
+.estado-directo .luz { width: 9px; height: 9px; border-radius: 50%; background: var(--texto-3); }
+.estado-directo.si .luz { background: #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, .2); animation: latido 1.4s infinite; }
+.lista-cert { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.cert { display: grid; grid-template-columns: 74px 1fr; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: var(--fondo-1); border: 1px solid var(--borde); }
+.cert.lista { border-color: rgba(255, 210, 63, .6); background: linear-gradient(120deg, rgba(255, 210, 63, .1), transparent); }
+.cert .funda { width: 74px; }
+.cert b { display: block; font-size: 13px; }
+.cert .barra { margin: 8px 0 4px; }
+.cert .tiempo { font-size: 11px; color: var(--texto-2); }
+.cert .btn { margin-top: 8px; }
+.cert-vacia { text-align: center; padding: 18px; border-radius: 14px; border: 1px dashed var(--borde-2); color: var(--texto-3); font-size: 12px; }
+.tabla-notas { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; }
+.tabla-notas div { padding: 7px; border-radius: 10px; background: var(--fondo-1); border: 1px solid var(--borde); text-align: center; }
+.tabla-notas b { display: block; font-family: var(--display); font-size: 16px; }
+.tabla-notas span { display: block; font-size: 10px; color: var(--texto-3); font-weight: 700; }
+.tabla-notas em { display: block; font-style: normal; font-size: 11px; font-weight: 900; color: #ffd23f; }
+.rejilla-fundas { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+
+/* Revelado de la nota */
+.revelado-nota { position: absolute; inset: 0; z-index: 45; background: radial-gradient(ellipse at 50% 40%, #1c1430, #050507 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center; animation: aparecer .3s; overflow: hidden; }
+.revelado-nota .zona-funda { width: min(240px, 60vw); animation: girar-entra .9s cubic-bezier(.2, 1.2, .4, 1); }
+@keyframes girar-entra { from { transform: rotateY(90deg) scale(.6); opacity: 0; } }
+.revelado-nota .contador-nota { font-family: var(--display); font-size: 64px; line-height: 1; }
+.revelado-nota .texto-nota { font-size: 12px; letter-spacing: .3em; text-transform: uppercase; font-weight: 900; color: var(--morado-2); }
+.revelado-nota .valor { font-size: 13px; color: var(--texto-2); }
+.revelado-nota .valor b { color: #ffd23f; }
+.hueco-album .carta .c-nota { font-size: 4.4cqw; }
+@media (max-width: 380px) {
+  .sub-nav button { padding: 6px 8px; font-size: 11px; }
 }

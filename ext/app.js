@@ -97,6 +97,7 @@ function irA(seccion, vista) {
   if (seccion === 'coleccion') {
     mostrarVista(estado.vista);
     if (estado.vista === 'album') pintarAlbum();
+    if (estado.vista === 'certificar') pintarCertificar();
   } else if (seccion === 'tienda') {
     mostrarVista('tienda');
     pintarTienda();
@@ -138,6 +139,7 @@ async function cargar() {
     $('total-cartas').textContent = datos.copias.length;
     pintarGloboCambios(datos.intercambios_pendientes);
     pintarPolvo();
+    pintarGloboCert();
     irA(estado.seccion, estado.vista);
   } catch (e) {
     console.error(e);
@@ -159,6 +161,12 @@ async function ping() {
       if (estado.seccion === 'cambios') cargarCambios();
     }
     estado.datos.intercambios_pendientes = r.intercambios_pendientes;
+    const listasAntes = estado.datos.certificaciones.filter((c) => c.estado === 'lista').length;
+    estado.datos.certificaciones = r.certificaciones;
+    estado.datos.en_directo = r.en_directo;
+    if (r.certificaciones.filter((c) => c.estado === 'lista').length > listasAntes) avisar('📜 ¡Una carta ha terminado de certificarse! Recógela en Certificar');
+    pintarGloboCert();
+    if (estado.seccion === 'coleccion' && estado.vista === 'certificar') pintarCertificar();
     pintarGloboCambios(r.intercambios_pendientes);
     if (r.sobres_sin_abrir > estado.datos.reserva.length) {
       avisar('🎁 ¡Has recibido un sobre! Míralo en tu Reserva');
@@ -337,9 +345,13 @@ async function lanzarApertura(tipo, preparar, idSobre) {
 function agruparMias() {
   const mias = new Map();
   for (const c of estado.datos.copias) {
-    if (!mias.has(c.carta_id)) mias.set(c.carta_id, { series: [], ultima: c.obtenida_en, primera: c.obtenida_en });
+    if (!mias.has(c.carta_id)) mias.set(c.carta_id, { series: [], notas: {}, mejorNota: null, ultima: c.obtenida_en, primera: c.obtenida_en });
     const g = mias.get(c.carta_id);
     g.series.push(c.numero_serie);
+    if (c.nota) {
+      g.notas[c.numero_serie] = c.nota;
+      if (!g.mejorNota || c.nota > g.mejorNota) g.mejorNota = c.nota;
+    }
     if (c.obtenida_en > g.ultima) g.ultima = c.obtenida_en;
     if (c.obtenida_en < g.primera) g.primera = c.obtenida_en;
   }
@@ -390,7 +402,7 @@ function pintarAlbum() {
       continue;
     }
     const h = crear('div', 'hueco-album');
-    h.appendChild(elementoCarta(carta, { nueva: esNueva(mia.ultima), serie: mia.series.length === 1 ? mia.series[0] : null }));
+    h.appendChild(elementoCarta(carta, { nueva: esNueva(mia.ultima), serie: mia.series.length === 1 ? mia.series[0] : null, nota: mia.mejorNota }));
     if (mia.series.length > 1) h.appendChild(crear('span', 'multi', '×' + mia.series.length));
     h.addEventListener('click', () => verDetalle(carta, mia));
     album.appendChild(h);
@@ -410,7 +422,14 @@ function verDetalle(carta, mia) {
   info.appendChild(crear('div', 'fecha', 'Obtenida el ' + fechaCorta(mia.primera)));
 
   const zona = crear('div', 'zona-carta');
-  zona.appendChild(inclinable(elementoCarta(carta, { serie: mia.series.length === 1 ? mia.series[0] : null })));
+  if (mia.mejorNota) {
+    const serieMejor = Number(Object.keys(mia.notas).find((k) => mia.notas[k] === mia.mejorNota));
+    const funda = elementoFunda(carta, { serie: serieMejor, nota: mia.mejorNota });
+    funda.style.width = 'min(240px, 64vw)';
+    zona.appendChild(funda);
+  } else {
+    zona.appendChild(inclinable(elementoCarta(carta, { serie: mia.series.length === 1 ? mia.series[0] : null })));
+  }
   const lupa = crear('button', 'btn redondo');
   lupa.title = 'Ampliar';
   lupa.appendChild(icono('zoom'));
@@ -418,9 +437,18 @@ function verDetalle(carta, mia) {
   zona.appendChild(lupa);
 
   capa.append(cerrar, info, zona);
-  const valor = estado.datos.polvo_por_rareza?.[carta.rareza] ?? 0;
+  // Copia a desmontar: la de número más alto, mejor si no está certificada (y nunca una en certificación)
+  const enProceso = new Set(estado.datos.certificaciones.map((x) => x.copia_id));
+  const candidata = estado.datos.copias
+    .filter((x) => x.carta_id === carta.id && !enProceso.has(x.id))
+    .sort((a, b) => (a.nota ? 1 : 0) - (b.nota ? 1 : 0) || b.numero_serie - a.numero_serie)[0];
+  const valor = candidata ? valorPolvo(carta, candidata.nota, estado.datos.polvo_por_rareza) : 0;
   const acciones = crear('div', 'acciones-detalle');
   const desmontarBtn = crear('button', 'btn', `Desmontar 1 copia (+✦ ${valor})`);
+  if (!candidata) {
+    desmontarBtn.disabled = true;
+    desmontarBtn.textContent = 'Se está certificando';
+  }
   desmontarBtn.title = mia.series.length > 1 ? 'Se desmonta la copia con el número de serie más alto' : 'Es tu única copia';
   desmontarBtn.addEventListener('click', async () => {
     if (!desmontarBtn.dataset.ok) {
@@ -429,7 +457,7 @@ function verDetalle(carta, mia) {
       setTimeout(() => { delete desmontarBtn.dataset.ok; desmontarBtn.textContent = `Desmontar 1 copia (+✦ ${valor})`; }, 3000);
       return;
     }
-    const copia = estado.datos.copias.filter((c) => c.carta_id === carta.id).sort((a, b) => b.numero_serie - a.numero_serie)[0];
+    const copia = candidata;
     desmontarBtn.disabled = true;
     try {
       const r = await api('/api/polvo/desmontar', { method: 'POST', body: { copias: [copia.id] } });
@@ -444,10 +472,10 @@ function verDetalle(carta, mia) {
   });
   acciones.appendChild(desmontarBtn);
   const limite = carta.limite_copias ? '/' + carta.limite_copias : '';
-  if (mia.series.length > 1 || carta.limite_copias) {
+  if (mia.series.length > 1 || carta.limite_copias || mia.mejorNota) {
     capa.appendChild(crear('div', 'antetitulo', `Tienes ${mia.series.length} ${mia.series.length === 1 ? 'copia' : 'copias'}`));
     const series = crear('div', 'series');
-    [...mia.series].sort((a, b) => a - b).forEach((n) => series.appendChild(crear('span', null, '#' + n + limite)));
+    [...mia.series].sort((a, b) => a - b).forEach((n) => series.appendChild(crear('span', null, '#' + n + limite + (mia.notas[n] ? ' · ★' + mia.notas[n] : ''))));
     capa.appendChild(series);
   }
   capa.appendChild(acciones);
@@ -666,7 +694,7 @@ async function cargarCambios() {
 function minis(lista) {
   const caja = crear('div', 'minis');
   if (!lista.length) caja.appendChild(crear('span', 'nada', 'Nada'));
-  for (const c of lista) if (c.carta) caja.appendChild(elementoCarta(c.carta, { serie: c.numero_serie }));
+  for (const c of lista) if (c.carta) caja.appendChild(elementoCarta(c.carta, { serie: c.numero_serie, nota: c.nota }));
   return caja;
 }
 
@@ -788,7 +816,7 @@ function asistenteCambio() {
     for (const c of copias) {
       if (!c.carta) continue;
       const item = crear('div', 'sel-carta' + (conjunto.has(c.id) ? ' sel' : ''));
-      item.appendChild(elementoCarta(c.carta, { serie: c.numero_serie }));
+      item.appendChild(elementoCarta(c.carta, { serie: c.numero_serie, nota: c.nota }));
       item.appendChild(crear('div', 'marca-sel'));
       const tick = crear('div', 'tick');
       tick.appendChild(icono('check'));
@@ -807,8 +835,10 @@ function asistenteCambio() {
 
   function misCopias() {
     const porId = new Map(estado.datos.catalogo.map((c) => [c.id, c]));
+    const enProceso = new Set(estado.datos.certificaciones.map((x) => x.copia_id));
     return estado.datos.copias
-      .map((c) => ({ id: c.id, numero_serie: c.numero_serie, carta: porId.get(c.carta_id) }))
+      .filter((c) => !enProceso.has(c.id))
+      .map((c) => ({ id: c.id, numero_serie: c.numero_serie, nota: c.nota, carta: porId.get(c.carta_id) }))
       .sort((a, b) => RAREZAS[b.carta?.rareza]?.orden - RAREZAS[a.carta?.rareza]?.orden);
   }
 
@@ -966,16 +996,17 @@ async function comprarSobre(tipo) {
 function asistenteDesmontar() {
   const porId = new Map(estado.datos.catalogo.map((c) => [c.id, c]));
   const valores = estado.datos.polvo_por_rareza || {};
+  const enProceso = new Set(estado.datos.certificaciones.map((x) => x.copia_id));
   const copias = estado.datos.copias
     .map((c) => ({ ...c, carta: porId.get(c.carta_id) }))
-    .filter((c) => c.carta)
+    .filter((c) => c.carta && !enProceso.has(c.id))
     .sort((a, b) => RAREZAS[a.carta.rareza].orden - RAREZAS[b.carta.rareza].orden || a.carta.id - b.carta.id || a.numero_serie - b.numero_serie);
 
   const repetidas = () => {
     const vistas = new Set();
     const ids = new Set();
     for (const c of copias) {
-      if (vistas.has(c.carta_id)) ids.add(c.id);
+      if (vistas.has(c.carta_id) && !c.nota) ids.add(c.id);
       vistas.add(c.carta_id);
     }
     return ids;
@@ -1014,7 +1045,7 @@ function asistenteDesmontar() {
     rejilla.innerHTML = '';
     for (const c of copias) {
       const item = crear('div', 'sel-carta' + (elegidas.has(c.id) ? ' sel' : ''));
-      item.appendChild(elementoCarta(c.carta, { serie: c.numero_serie }));
+      item.appendChild(elementoCarta(c.carta, { serie: c.numero_serie, nota: c.nota }));
       item.appendChild(crear('div', 'marca-sel'));
       const tick = crear('div', 'tick');
       tick.appendChild(icono('check'));
@@ -1027,7 +1058,10 @@ function asistenteDesmontar() {
     }
     if (!copias.length) rejilla.appendChild(crear('p', 'gris', 'No tienes cartas.'));
 
-    const total = [...elegidas].reduce((s, id) => s + (valores[copias.find((c) => c.id === id).carta.rareza] ?? 0), 0);
+    const total = [...elegidas].reduce((s, id) => {
+      const c = copias.find((x) => x.id === id);
+      return s + valorPolvo(c.carta, c.nota, valores);
+    }, 0);
     // ¿Alguna carta se queda sin ninguna copia?
     const perdidas = new Set();
     for (const c of copias) {
@@ -1062,4 +1096,198 @@ function asistenteDesmontar() {
     }
   });
   pintar();
+}
+
+// ------------------------------------------------------------------
+// Certificación
+// ------------------------------------------------------------------
+$('btn-certificar').addEventListener('click', () => asistenteCertificar());
+
+function pintarGloboCert() {
+  const listas = (estado.datos?.certificaciones || []).filter((c) => c.estado === 'lista').length;
+  $('globo-cert').textContent = listas;
+  $('globo-cert').classList.toggle('oculto', !listas);
+}
+
+function cartaDeCopia(copiaId) {
+  const copia = estado.datos.copias.find((c) => c.id === copiaId);
+  return copia ? { copia, carta: estado.datos.catalogo.find((k) => k.id === copia.carta_id) } : null;
+}
+
+function pintarCertificar() {
+  const { certificacion, certificaciones, en_directo, polvo_por_rareza } = estado.datos;
+  $('cert-explicacion').textContent =
+    `Envía una carta a certificar por ✦ ${certificacion.coste}. Tarda ${certificacion.minutos} min de directo ` +
+    `(solo avanza mientras el canal está en directo y tienes la extensión abierta). Al terminar recibe una nota del 1 al 10 que multiplica su valor.`;
+
+  const directo = $('cert-directo');
+  directo.className = 'estado-directo' + (en_directo ? ' si' : '');
+  directo.innerHTML = '';
+  directo.append(crear('span', 'luz'), en_directo ? 'En directo: tus certificaciones avanzan' : 'Fuera de directo: las certificaciones están en pausa');
+
+  const lista = $('lista-cert');
+  lista.innerHTML = '';
+  for (const cert of certificaciones) {
+    const datos = cartaDeCopia(cert.copia_id);
+    if (!datos?.carta) continue;
+    const fila = crear('div', 'cert' + (cert.estado === 'lista' ? ' lista' : ''));
+    fila.appendChild(elementoFunda(datos.carta, { serie: datos.copia.numero_serie }));
+    const info = crear('div');
+    info.appendChild(crear('b', null, datos.carta.nombre));
+    const pct = Math.min(100, (Number(cert.minutos_acumulados) / cert.minutos_necesarios) * 100);
+    const barra = crear('div', 'barra');
+    const relleno = crear('div');
+    relleno.style.width = pct + '%';
+    barra.appendChild(relleno);
+    info.appendChild(barra);
+    if (cert.estado === 'lista') {
+      info.appendChild(crear('div', 'tiempo', '¡Lista para recoger!'));
+      const recoger = crear('button', 'btn primario', '📜 Recoger y ver la nota');
+      recoger.addEventListener('click', () => recogerCert(cert, datos));
+      info.appendChild(recoger);
+    } else {
+      const faltan = Math.ceil(cert.minutos_necesarios - Number(cert.minutos_acumulados));
+      info.appendChild(crear('div', 'tiempo', `${Math.floor(Number(cert.minutos_acumulados))} / ${cert.minutos_necesarios} min · faltan ${faltan} min de directo`));
+    }
+    fila.appendChild(info);
+    lista.appendChild(fila);
+  }
+  if (!certificaciones.length) lista.appendChild(crear('div', 'cert-vacia', 'No tienes cartas certificándose ahora mismo.'));
+
+  const boton = $('btn-certificar');
+  boton.disabled = certificaciones.length >= certificacion.max;
+  boton.textContent = boton.disabled
+    ? `Máximo ${certificacion.max} a la vez`
+    : `Enviar una carta a certificar (✦ ${certificacion.coste})`;
+
+  // Tabla de notas
+  const tabla = $('tabla-notas');
+  tabla.innerHTML = '';
+  for (const n of [10, 9, 8, 7, 6, 5]) {
+    const d = crear('div');
+    d.append(crear('b', null, '★ ' + n), crear('span', null, NOTAS[n]), crear('em', null, '×' + multiplicadorNota(n) + ' valor'));
+    tabla.appendChild(d);
+  }
+  const resto = crear('div');
+  resto.append(crear('b', null, '★ 1-4'), crear('span', null, 'Usada o peor'), crear('em', null, '×1 valor'));
+  tabla.appendChild(resto);
+
+  // Certificadas
+  const fundas = $('fundas');
+  fundas.innerHTML = '';
+  const certificadas = estado.datos.copias.filter((c) => c.nota).sort((a, b) => b.nota - a.nota);
+  for (const c of certificadas) {
+    const carta = estado.datos.catalogo.find((k) => k.id === c.carta_id);
+    if (!carta) continue;
+    const f = elementoFunda(carta, { serie: c.numero_serie, nota: c.nota });
+    f.title = `Valor al desmontar: ✦ ${valorPolvo(carta, c.nota, polvo_por_rareza)}`;
+    fundas.appendChild(f);
+  }
+  if (!certificadas.length) fundas.appendChild(crear('p', 'gris pequeno', 'Aún no tienes cartas certificadas.'));
+}
+
+function asistenteCertificar() {
+  const { certificacion, certificaciones, polvo_por_rareza, usuario } = estado.datos;
+  if (usuario.polvo < certificacion.coste) {
+    return avisar(`Necesitas ✦ ${certificacion.coste} de polvo para certificar. Desmonta repetidas en la Tienda.`, true);
+  }
+  const enProceso = new Set(certificaciones.map((x) => x.copia_id));
+  const porId = new Map(estado.datos.catalogo.map((c) => [c.id, c]));
+  const candidatas = estado.datos.copias
+    .filter((c) => !c.nota && !enProceso.has(c.id))
+    .map((c) => ({ ...c, carta: porId.get(c.carta_id) }))
+    .filter((c) => c.carta)
+    .sort((a, b) => RAREZAS[b.carta.rareza].orden - RAREZAS[a.carta.rareza].orden || a.numero_serie - b.numero_serie);
+
+  let elegida = null;
+  const capa = crear('div', 'asistente');
+  const cab = crear('div', 'asistente-cab');
+  const cerrar = crear('button', 'btn redondo fantasma');
+  cerrar.appendChild(icono('cerrar'));
+  cerrar.addEventListener('click', () => capa.remove());
+  cab.append(crear('h3', null, 'Elegir carta para certificar'), cerrar);
+  const cuerpo = crear('div', 'asistente-cuerpo');
+  const pie = crear('div', 'asistente-pie');
+  const boton = crear('button', 'btn primario', 'Elige una carta');
+  boton.style.flex = '1';
+  boton.disabled = true;
+  pie.appendChild(boton);
+  capa.append(cab, cuerpo, pie);
+  $('app').appendChild(capa);
+
+  cuerpo.appendChild(crear('p', 'gris pequeno', 'Las cartas certificadas valen más polvo y lucen su nota. Mientras se certifica no podrás intercambiarla ni desmontarla.'));
+  const rejilla = crear('div', 'rejilla-sel');
+  cuerpo.appendChild(rejilla);
+  if (!candidatas.length) rejilla.appendChild(crear('p', 'gris', 'No tienes cartas sin certificar.'));
+  for (const c of candidatas) {
+    const item = crear('div', 'sel-carta');
+    item.appendChild(elementoCarta(c.carta, { serie: c.numero_serie }));
+    item.appendChild(crear('div', 'marca-sel'));
+    const tick = crear('div', 'tick');
+    tick.appendChild(icono('check'));
+    item.appendChild(tick);
+    item.addEventListener('click', () => {
+      elegida = c;
+      rejilla.querySelectorAll('.sel-carta').forEach((x) => x.classList.toggle('sel', x === item));
+      const base = valorPolvo(c.carta, null, polvo_por_rareza);
+      boton.textContent = `Certificar ${c.carta.nombre} (✦ ${certificacion.coste}) · vale ✦ ${base}, hasta ✦ ${base * 10}`;
+      boton.disabled = false;
+    });
+    rejilla.appendChild(item);
+  }
+
+  boton.addEventListener('click', async () => {
+    if (!elegida) return;
+    boton.disabled = true;
+    try {
+      const r = await api('/api/certificar', { method: 'POST', body: { copia_id: elegida.id } });
+      estado.datos.usuario.polvo = r.polvo;
+      estado.datos.certificaciones = r.certificaciones;
+      pintarPolvo();
+      Sonido.play('compra');
+      avisar(`📨 ${elegida.carta.nombre} enviada a certificar`);
+      capa.remove();
+      pintarCertificar();
+    } catch (e) {
+      avisar(e.message, true);
+      boton.disabled = false;
+    }
+  });
+}
+
+async function recogerCert(cert, datos) {
+  let r;
+  try {
+    r = await api('/api/certificar/recoger', { method: 'POST', body: { id: cert.id } });
+  } catch (e) {
+    return avisar(e.message, true);
+  }
+
+  const capa = crear('div', 'revelado-nota');
+  const zona = crear('div', 'zona-funda');
+  zona.appendChild(elementoFunda(r.carta, { serie: r.copia.numero_serie }));
+  const contador = crear('div', 'contador-nota degradado-texto', '?');
+  const texto = crear('div', 'texto-nota', 'Revisando…');
+  capa.append(zona, contador, texto);
+  $('app').appendChild(capa);
+  Sonido.play('redoble');
+
+  // Cuenta hacia arriba hasta la nota
+  for (let n = 1; n <= r.nota; n++) {
+    contador.textContent = n;
+    Sonido.play('click');
+    await esperar(110 + n * 25);
+  }
+  zona.innerHTML = '';
+  zona.appendChild(inclinable(elementoFunda(r.carta, { serie: r.copia.numero_serie, nota: r.nota })));
+  texto.textContent = NOTAS[r.nota];
+  const sonidoPorNota = r.nota >= 10 ? 'divina' : r.nota >= 9 ? 'legendaria' : r.nota >= 8 ? 'epica' : r.nota >= 6 ? 'rara' : 'comun';
+  Sonido.play('revelar', sonidoPorNota);
+  const base = valorPolvo(r.carta, null, estado.datos.polvo_por_rareza);
+  const valor = crear('div', 'valor');
+  valor.append('Valor al desmontar: ✦ ' + base + ' → ', crear('b', null, '✦ ' + valorPolvo(r.carta, r.nota, estado.datos.polvo_por_rareza)));
+  const ok = crear('button', 'btn primario', 'Genial');
+  ok.addEventListener('click', () => capa.remove());
+  capa.append(valor, ok);
+  await cargar();
 }

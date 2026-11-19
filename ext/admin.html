@@ -219,6 +219,23 @@
           <p class="sub">Lo que recibe un espectador al desmontar una carta. Ponles precio a los sobres en «Sobres» para venderlos en la tienda.</p>
           <div class="fila polvo-ajustes" id="aj-polvo" style="margin-top:12px"></div>
 
+          <h2 class="separado">Certificación de cartas</h2>
+          <p class="sub">Los espectadores envían cartas a certificar; tardan un tiempo de directo y reciben una nota del 1 al 10 que multiplica su valor (×10 con un 10, ×5 con un 9, ×3 con un 8…).</p>
+          <div class="fila" style="margin-top:12px">
+            <div class="campo">
+              <label for="aj-cert-coste">Coste (polvo)</label>
+              <input id="aj-cert-coste" class="input corto" type="number" min="0">
+            </div>
+            <div class="campo">
+              <label for="aj-cert-min">Minutos de directo</label>
+              <input id="aj-cert-min" class="input corto" type="number" min="1" max="10000">
+            </div>
+            <div class="campo">
+              <label for="aj-cert-max">Máx. a la vez</label>
+              <input id="aj-cert-max" class="input corto" type="number" min="1" max="20">
+            </div>
+          </div>
+
           <h2 class="separado">Alertas en directo (OBS)</h2>
           <p class="sub">Cuando alguien consiga una carta buena, aparecerá en tu directo. En OBS: Fuentes → + → Navegador → pega la URL (ancho 800, alto 600).</p>
           <div class="campo" style="margin-top:12px">

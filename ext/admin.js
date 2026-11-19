@@ -890,6 +890,9 @@ async function cargarAjustes() {
   $('aj-recarga').value = datos.ajustes.energia_recarga_min;
   $('marca-nombre').textContent = datos.ajustes.nombre_coleccion;
   $('aj-rareza-alerta').value = datos.ajustes.alerta_rareza_min;
+  $('aj-cert-coste').value = datos.ajustes.certificacion_coste;
+  $('aj-cert-min').value = datos.ajustes.certificacion_minutos;
+  $('aj-cert-max').value = datos.ajustes.certificacion_max;
   const cajaPolvo = $('aj-polvo');
   cajaPolvo.innerHTML = '';
   for (const [r, info] of Object.entries(RAREZAS)) {
@@ -953,6 +956,9 @@ $('btn-guardar-ajustes').addEventListener('click', async () => {
         energia_max: Number($('aj-max').value),
         energia_recarga_min: Number($('aj-recarga').value),
         alerta_rareza_min: $('aj-rareza-alerta').value,
+        certificacion_coste: Number($('aj-cert-coste').value || 0),
+        certificacion_minutos: Number($('aj-cert-min').value || 60),
+        certificacion_max: Number($('aj-cert-max').value || 3),
         polvo_por_rareza: Object.fromEntries([...$('aj-polvo').querySelectorAll('input')].map((i) => [i.dataset.rareza, Number(i.value || 0)])),
       },
     })).ajustes;
@@ -1040,7 +1046,7 @@ async function verEspectador(id) {
   cuerpo.appendChild(crear('div', 'etiqueta', `Colección (${d.copias.length})`));
   const rejilla = crear('div', 'mini-rejilla');
   rejilla.style.marginTop = '10px';
-  for (const c of d.copias) if (c.cartas) rejilla.appendChild(elementoCarta(c.cartas, { serie: c.numero_serie }));
+  for (const c of d.copias) if (c.cartas) rejilla.appendChild(elementoCarta(c.cartas, { serie: c.numero_serie, nota: c.nota }));
   if (!d.copias.length) rejilla.appendChild(crear('p', 'sub', 'Aún no tiene cartas.'));
   cuerpo.appendChild(rejilla);
 

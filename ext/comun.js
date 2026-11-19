@@ -144,6 +144,7 @@ function elementoCarta(carta, opciones = {}) {
   if (opciones.nueva) arte.appendChild(crear('span', 'c-badge c-nueva', 'Nueva'));
   if (carta.limite_copias) arte.appendChild(crear('span', 'c-badge c-limitada', '🔒 Edición limitada'));
   arte.appendChild(crear('span', 'c-badge c-rareza', textoRareza(carta.rareza)));
+  if (opciones.nota) arte.appendChild(crear('span', 'c-badge c-nota nota-' + opciones.nota, '★ ' + opciones.nota));
   marco.appendChild(arte);
 
   const caja = crear('div', 'c-texto');
@@ -340,3 +341,41 @@ const EFECTOS = {
   dorado: { nombre: 'Dorado', desc: 'Lámina de oro brillante' },
   cristal: { nombre: 'Cristal', desc: 'Prisma que cambia de color' },
 };
+
+// ------------------------------------------------------------------
+// Certificación
+// ------------------------------------------------------------------
+const NOTAS = {
+  10: 'Perfecta', 9: 'Impecable', 8: 'Excelente', 7: 'Muy buena', 6: 'Buena',
+  5: 'Correcta', 4: 'Usada', 3: 'Gastada', 2: 'Dañada', 1: 'Muy dañada',
+};
+function multiplicadorNota(nota) {
+  if (!nota) return 1;
+  return { 10: 10, 9: 5, 8: 3, 7: 2, 6: 1.5, 5: 1.2 }[nota] || 1;
+}
+function valorPolvo(carta, nota, tabla) {
+  return Math.round((tabla?.[carta.rareza] ?? 0) * multiplicadorNota(nota));
+}
+
+// Carta dentro de su funda de certificación, con la etiqueta de la nota.
+function elementoFunda(carta, opciones = {}) {
+  const funda = crear('div', 'funda' + (opciones.nota ? ' nota-' + opciones.nota : ' pendiente'));
+  const etiqueta = crear('div', 'funda-etiqueta');
+  const izq = crear('div', 'funda-datos');
+  izq.appendChild(crear('div', 'funda-marca', '✦ CERTIFICADA'));
+  izq.appendChild(crear('div', 'funda-nombre', carta.nombre));
+  izq.appendChild(crear('div', 'funda-serie', (opciones.serie != null ? '#' + opciones.serie + (carta.limite_copias ? '/' + carta.limite_copias : '') + ' · ' : '') + textoRareza(carta.rareza)));
+  const der = crear('div', 'funda-nota');
+  if (opciones.nota) {
+    der.appendChild(crear('b', null, String(opciones.nota)));
+    der.appendChild(crear('span', null, NOTAS[opciones.nota]));
+  } else {
+    der.appendChild(crear('b', null, '?'));
+    der.appendChild(crear('span', null, 'En revisión'));
+  }
+  etiqueta.append(izq, der);
+  const ventana = crear('div', 'funda-ventana');
+  ventana.appendChild(elementoCarta(carta, { serie: opciones.serie }));
+  funda.append(etiqueta, ventana);
+  return funda;
+}

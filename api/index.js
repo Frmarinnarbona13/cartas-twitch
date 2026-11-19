@@ -16,6 +16,8 @@ const RUTAS = {
   'alertas':           { GET: publico.alertas },
   'polvo/desmontar':   { POST: publico.desmontar },
   'tienda/comprar':    { POST: publico.comprar },
+  'certificar':        { POST: publico.certificar },
+  'certificar/recoger': { POST: publico.recogerCertificacion },
 
   'intercambios':             { GET: intercambios.listar, POST: intercambios.crear },
   'intercambios/responder':   { POST: intercambios.responder },

@@ -404,3 +404,39 @@ button { cursor: pointer; }
 /* Con portada propia, el efecto se recorta a la forma de la imagen */
 .pack.con-imagen .brillo { display: block; }
 .pack.con-imagen.efecto-ninguno .brillo { display: none; }
+
+/* =====================================================================
+   CERTIFICACIÓN: insignia de nota y funda
+   ===================================================================== */
+.carta .c-nota { top: 2.5cqw; right: 2.5cqw; background: linear-gradient(135deg, #1b1b22, #2c2c38); color: #ffd23f; border: .5cqw solid #ffd23f; }
+.carta.diseno-arte_completo .c-nota { top: 24cqw; }
+.carta .c-nota.nota-10 { background: linear-gradient(135deg, #ff6ad5, #ffd36a, #6affc3, #6ab8ff); color: #111; border-color: #fff; }
+
+.funda {
+  container-type: inline-size;
+  width: 100%; border-radius: 4cqw; padding: 3cqw;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .06) 40%, rgba(255, 255, 255, .14));
+  border: 1px solid rgba(255, 255, 255, .35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 10px 30px rgba(0, 0, 0, .55);
+  position: relative; overflow: hidden;
+}
+.funda::after { /* reflejo del plástico */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .22) 45%, transparent 55%);
+}
+.funda-etiqueta {
+  display: flex; justify-content: space-between; align-items: center; gap: 3cqw;
+  padding: 2.5cqw 3.5cqw; border-radius: 2.5cqw; margin-bottom: 3cqw;
+  background: linear-gradient(135deg, #f6f4ee, #e3dfd4); color: #1a1a20; border: .6cqw solid #6d4aff;
+}
+.funda-datos { min-width: 0; }
+.funda-marca { font-size: 3.4cqw; font-weight: 900; letter-spacing: .12em; color: #6d4aff; }
+.funda-nombre { font-family: var(--carta-titulo); font-style: italic; text-transform: uppercase; font-size: 6cqw; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.funda-serie { font-size: 3.2cqw; font-weight: 700; color: #6b6977; }
+.funda-nota { text-align: center; flex-shrink: 0; }
+.funda-nota b { display: block; font-family: var(--display); font-size: 11cqw; line-height: 1; color: #1a1a20; }
+.funda-nota span { display: block; font-size: 2.8cqw; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #6d4aff; }
+.funda.nota-10 .funda-etiqueta { border-color: transparent; background: linear-gradient(#f6f4ee, #e3dfd4) padding-box, linear-gradient(90deg, #ff6ad5, #ffd36a, #6affc3, #6ab8ff, #c26aff) border-box; }
+.funda.nota-10 .funda-nota b { background: linear-gradient(90deg, #d4148f, #e0a100, #0aa37a, #1a74d6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.funda.pendiente .funda-nota b { color: #9a98a6; }
+.funda-ventana { border-radius: 3cqw; padding: 2cqw; background: rgba(0, 0, 0, .35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15); }
