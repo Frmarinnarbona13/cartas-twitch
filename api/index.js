@@ -34,6 +34,8 @@ const RUTAS = {
   'admin/ajustes':     { GET: admin.ajustes, PUT: admin.ajustes },
   'admin/resumen':     { GET: admin.resumen },
   'admin/simular':     { POST: admin.simular },
+  'admin/evento':      { GET: admin.evento, POST: admin.evento },
+  'admin/cartas/importar': { POST: admin.importarCartas },
   'admin/usuarios':    { GET: admin.usuarios },
   'admin/usuarios/detalle': { GET: admin.usuarioDetalle },
 };

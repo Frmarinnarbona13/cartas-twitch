@@ -28,6 +28,7 @@ Twitch.ext.onAuthorized((auth) => {
     setInterval(() => {
       if (!estado.datos?.identidad) return;
       pintarEnergia();
+      pintarEvento();
       if (estado.seccion === 'coleccion' && estado.vista === 'packs' && !estado.abriendo) pintarPacks();
     }, 20 * 1000);
   }
@@ -142,6 +143,7 @@ async function cargar() {
     pintarPolvo();
     pintarGloboCert();
     pintarGloboPerfil();
+    pintarEvento();
     irA(estado.seccion, estado.vista);
   } catch (e) {
     console.error(e);
@@ -166,6 +168,10 @@ async function ping() {
     const listasAntes = estado.datos.certificaciones.filter((c) => c.estado === 'lista').length;
     estado.datos.certificaciones = r.certificaciones;
     estado.datos.en_directo = r.en_directo;
+    const eventoAntes = estado.datos.evento?.tipo;
+    estado.datos.evento = r.evento;
+    if (r.evento && r.evento.tipo !== eventoAntes) avisar('🎉 ¡Evento en directo! ' + r.evento.texto);
+    pintarEvento();
     if (r.certificaciones.filter((c) => c.estado === 'lista').length > listasAntes) avisar('📜 ¡Una carta ha terminado de certificarse! Recógela en Certificar');
     pintarGloboCert();
     if (estado.seccion === 'coleccion' && estado.vista === 'certificar') pintarCertificar();
@@ -262,6 +268,8 @@ function pintarPacks() {
     }
     coste.querySelectorAll('svg').forEach((s) => { s.style.width = '11px'; s.style.height = '11px'; });
     item.appendChild(coste);
+    const g = textoGarantia(pack);
+    if (g) item.appendChild(g);
     item.addEventListener('click', () => {
       if (sinEnergia) {
         avisar('No te queda energía. Mira el reloj de arriba para saber cuándo se recarga.', true);
@@ -964,6 +972,8 @@ function pintarTienda() {
     item.appendChild(elementoPack(t));
     item.appendChild(crear('div', 'nombre', t.nombre));
     item.appendChild(crear('span', 'precio', t.precio_polvo.toLocaleString('es-ES')));
+    const g = textoGarantia(t);
+    if (g) item.appendChild(g);
     if (falta > 0) item.appendChild(crear('div', 'falta', `Te faltan ${falta.toLocaleString('es-ES')}`));
     item.addEventListener('click', () => {
       if (falta > 0) return avisar(`Te faltan ✦ ${falta} de polvo. Desmonta cartas repetidas para conseguirlo.`, true);
@@ -1396,4 +1406,28 @@ function pintarLogros() {
     fila.append(ico, info, der);
     lista.appendChild(fila);
   }
+}
+
+// ------------------------------------------------------------------
+// Eventos en directo y garantía
+// ------------------------------------------------------------------
+const ICONO_EVENTO = { suerte: '🍀', polvo_doble: '✨', energia_rapida: '⚡' };
+
+function pintarEvento() {
+  const ev = estado.datos?.evento;
+  const banner = $('banner-evento');
+  const restante = ev ? new Date(ev.hasta).getTime() - ahora() : 0;
+  if (!ev || restante <= 0) {
+    banner.classList.add('oculto');
+    return;
+  }
+  banner.innerHTML = '';
+  banner.append(`${ICONO_EVENTO[ev.tipo] || '🎉'} ${ev.texto}`, crear('span', 'quedan', `quedan ${Math.ceil(restante / 60000)} min`));
+  banner.classList.remove('oculto');
+}
+
+function textoGarantia(tipo) {
+  if (tipo.garantia_faltan == null) return null;
+  if (tipo.garantia_faltan === 0) return crear('div', 'garantia ya', '✨ ¡El próximo es garantizado!');
+  return crear('div', 'garantia', `Épica garantizada en ${tipo.garantia_faltan} ${tipo.garantia_faltan === 1 ? 'sobre' : 'sobres'}`);
 }

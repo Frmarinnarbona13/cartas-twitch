@@ -133,6 +133,23 @@ textarea.input { resize: vertical; min-height: 60px; }
 .drop-rapido .pack { width: 34px; }
 .drop-rapido .pack .pack-nombre { display: none; }
 
+/* ---------------- Eventos ---------------- */
+.eventos-botones { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.evento-btn { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--borde-2); background: #0d0d11; }
+.evento-btn b { font-size: 14px; }
+.evento-btn span { font-size: 12px; color: var(--texto-2); }
+.evento-btn:hover { border-color: var(--morado); background: #141020; }
+.evento-btn.activo { border-color: #ffd23f; background: rgba(255, 210, 63, .08); }
+.evento-actual { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: 10px; background: #0d0d11; border: 1px solid var(--borde); font-weight: 700; }
+.evento-actual.on { border-color: rgba(255, 210, 63, .6); background: linear-gradient(90deg, rgba(147, 51, 234, .25), rgba(219, 39, 119, .15)); }
+.importar-ayuda { font-size: 12px; color: var(--texto-2); line-height: 1.5; }
+.importar-ayuda code { background: var(--fondo-3); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.tabla-import { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+.tabla-import td, .tabla-import th { padding: 5px 6px; border-bottom: 1px solid #1d1d25; text-align: left; }
+.tabla-import th { color: var(--texto-3); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.tabla-import .mal { color: var(--rojo); }
+.vista-import { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; width: 100%; max-height: 80vh; overflow-y: auto; }
+
 /* ---------------- Cajón de edición ---------------- */
 .cajon-fondo { position: fixed; inset: 0; z-index: 50; background: rgba(4, 4, 6, .7); backdrop-filter: blur(6px); display: flex; justify-content: flex-end; animation: aparecer .2s; }
 .cajon { display: flex; width: min(1080px, 100%); height: 100%; background: #0d0d11; border-left: 1px solid var(--borde-2); box-shadow: -20px 0 60px rgba(0, 0, 0, .6); animation: entrar .25s ease-out; }

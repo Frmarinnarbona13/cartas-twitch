@@ -19,7 +19,7 @@ Twitch.ext.onAuthorized(async (auth) => {
     return;
   }
   try {
-    await Promise.all([cargarCartas(), cargarTipos(), cargarAjustes(), cargarResumen()]);
+    await Promise.all([cargarCartas(), cargarTipos(), cargarAjustes(), cargarResumen(), cargarEvento()]);
     $('estado-carga').classList.add('oculto');
   } catch (e) {
     estadoCarga('No se pudo conectar con el servidor: ' + e.message, true);
@@ -44,6 +44,7 @@ function irA(seccion) {
   document.querySelectorAll('.seccion').forEach((s) => s.classList.toggle('activa', s.id === 's-' + seccion));
   if (seccion === 'resumen') cargarResumen().catch(() => {});
   if (seccion === 'espectadores') cargarEspectadores();
+  if (seccion === 'drops') cargarEvento();
   window.scrollTo({ top: 0 });
 }
 
@@ -288,9 +289,9 @@ function fichaCarta(c) {
   return f;
 }
 
-function editarCarta(carta) {
+function editarCarta(carta, plantilla) {
   const nueva = !carta;
-  const c = carta ? { ...carta } : { nombre: '', coste: 0, rareza: 'comun', imagen_url: '', descripcion: '', frase: '', artista: '', grupo: '', limite_copias: null, activa: true, diseno: 'clasica', efecto: 'auto', copias_emitidas: 0 };
+  const c = carta ? { ...carta } : plantilla ? { ...plantilla } : { nombre: '', coste: 0, rareza: 'comun', imagen_url: '', descripcion: '', frase: '', artista: '', grupo: '', limite_copias: null, activa: true, diseno: 'clasica', efecto: 'auto', copias_emitidas: 0 };
   cajon.abrir({
     titulo: nueva ? 'Nueva carta' : 'Editar carta',
     sub: nueva ? 'Rellena los datos; la vista previa se actualiza sola.' : `${numero3(c.id)} · ${c.copias_emitidas} copias emitidas`,
@@ -428,6 +429,17 @@ function editarCarta(carta) {
     });
     pie.appendChild(borrar);
   }
+  if (!nueva) {
+    const duplicar = crear('button', 'btn', 'Duplicar');
+    duplicar.title = 'Crea una carta nueva con estos mismos datos';
+    duplicar.addEventListener('click', () => {
+      leer();
+      const copia = { ...c, nombre: (c.nombre + ' (copia)').slice(0, 40), copias_emitidas: 0 };
+      delete copia.id;
+      editarCarta(null, copia);
+    });
+    pie.appendChild(duplicar);
+  }
   pie.appendChild(crear('div', 'espacio'));
   const cancelar = crear('button', 'btn', 'Cancelar');
   cancelar.addEventListener('click', cajon.cerrar);
@@ -525,6 +537,7 @@ function pintarTipos() {
     );
     if (t.grupos?.length) meta.append(' · Grupos: ' + t.grupos.join(', '));
     if (t.precio_polvo) meta.appendChild(crear('span', 'badge gris', `Tienda: ✦ ${t.precio_polvo}`));
+    if (t.garantia_cada) meta.appendChild(crear('span', 'badge gris', `Garantía cada ${t.garantia_cada}`));
     if (!t.activo) meta.appendChild(crear('span', 'badge gris', 'Desactivado'));
     centro.appendChild(meta);
     centro.appendChild(barraProbabilidad(t.reales));
@@ -620,6 +633,7 @@ function editarTipo(tipo) {
   const imagen = entrada('url', t.imagen_url, { placeholder: 'https://… (opcional)' });
   const num = entrada('number', t.cartas_por_sobre, { min: 1, max: 10 });
   const precio = entrada('number', t.precio_polvo ?? '', { min: 1, placeholder: 'No se vende' });
+  const garantia = entrada('number', t.garantia_cada ?? '', { min: 2, max: 100, placeholder: 'Sin garantía' });
 
   const modo = crear('div', 'segmentado');
   for (const [v, txt] of [['energia', 'Gratis con energía'], ['regalo', 'Solo regalos y drops']]) {
@@ -694,6 +708,7 @@ function editarTipo(tipo) {
     campo('¿Cómo se consigue?', modo, '«Gratis con energía» aparece en Packs para todos. «Solo regalos» solo llega con tus drops.'),
     campo('Cartas boca abajo para elegir', num),
     campo('Precio en la tienda (polvo)', precio, 'Vacío = no se vende en la tienda.'),
+    campo('Garantía: épica o mejor cada X sobres', garantia, 'Si alguien abre X−1 sobres seguidos sin quedarse una épica o mejor, el siguiente trae solo épicas o mejores. Vacío = sin garantía.'),
     campo('Qué cartas contiene', grupos, 'Marca grupos para limitar el sobre. Sin marcar = todas las cartas.'),
     campo('Probabilidad por rareza (pesos)', probs, 'La columna gris es el % real teniendo en cuenta las cartas disponibles.'),
     campo(null, activo.el),
@@ -704,10 +719,11 @@ function editarTipo(tipo) {
     t.imagen_url = imagen.value.trim();
     t.cartas_por_sobre = Number(num.value || 5);
     t.precio_polvo = precio.value === '' ? null : Number(precio.value);
+    t.garantia_cada = garantia.value === '' ? null : Number(garantia.value);
     t.activo = activo.input.checked;
     preview();
   };
-  [nombre, imagen, num, precio].forEach((el) => el.addEventListener('input', leerBasicos));
+  [nombre, imagen, num, precio, garantia].forEach((el) => el.addEventListener('input', leerBasicos));
   activo.input.addEventListener('change', leerBasicos);
   preview();
 
@@ -720,7 +736,7 @@ function editarTipo(tipo) {
     leerBasicos();
     guardar.disabled = true;
     try {
-      const body = { nombre: t.nombre, imagen_url: t.imagen_url, modo: t.modo, cartas_por_sobre: t.cartas_por_sobre, grupos: t.grupos, probabilidades: t.probabilidades, activo: t.activo, precio_polvo: t.precio_polvo, efecto: t.efecto };
+      const body = { nombre: t.nombre, imagen_url: t.imagen_url, modo: t.modo, cartas_por_sobre: t.cartas_por_sobre, grupos: t.grupos, probabilidades: t.probabilidades, activo: t.activo, precio_polvo: t.precio_polvo, efecto: t.efecto, garantia_cada: t.garantia_cada };
       if (nuevo) await api('/api/admin/tipos-sobre', { method: 'POST', body: { ...body, orden: datos.tipos.length } });
       else await api('/api/admin/tipos-sobre', { method: 'PUT', body: { id: t.id, ...body } });
       avisar('Sobre guardado');
@@ -1130,4 +1146,144 @@ function tablaAparicion(c) {
     caja.appendChild(fila);
   }
   return caja;
+}
+
+// =====================================================================
+// EVENTOS EN DIRECTO
+// =====================================================================
+let eventoActual = null;
+async function cargarEvento() {
+  try {
+    eventoActual = (await api('/api/admin/evento')).evento;
+    pintarEvento();
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+function pintarEvento() {
+  const caja = $('evento-actual');
+  caja.innerHTML = '';
+  const activo = eventoActual && new Date(eventoActual.hasta) > new Date();
+  caja.classList.toggle('on', Boolean(activo));
+  document.querySelectorAll('.evento-btn').forEach((b) => b.classList.toggle('activo', activo && b.dataset.evento === eventoActual.tipo));
+  if (!activo) {
+    caja.append('Ningún evento activo');
+    return;
+  }
+  const minutos = Math.ceil((new Date(eventoActual.hasta) - Date.now()) / 60000);
+  caja.append(`🎉 ${eventoActual.texto} · quedan ${minutos} min`);
+  const parar = crear('button', 'btn peligro', 'Terminar ahora');
+  parar.addEventListener('click', () => activarEvento(null));
+  caja.appendChild(parar);
+}
+setInterval(() => eventoActual && pintarEvento(), 30000);
+
+async function activarEvento(tipo) {
+  try {
+    eventoActual = (await api('/api/admin/evento', { method: 'POST', body: { tipo, minutos: Number($('evento-minutos').value) } })).evento;
+    pintarEvento();
+    avisar(tipo ? '🎉 Evento activado' : 'Evento terminado');
+  } catch (e) {
+    avisar(e.message, true);
+  }
+}
+document.querySelectorAll('.evento-btn').forEach((b) => b.addEventListener('click', () => activarEvento(b.dataset.evento)));
+
+// =====================================================================
+// IMPORTAR CARTAS EN LOTE
+// =====================================================================
+$('btn-importar').addEventListener('click', abrirImportar);
+
+const ALIAS_RAREZA = { comun: 'comun', común: 'comun', c: 'comun', rara: 'rara', r: 'rara', epica: 'epica', épica: 'epica', e: 'epica', legendaria: 'legendaria', l: 'legendaria', divina: 'divina', d: 'divina' };
+
+function analizarLineas(texto, urlBase) {
+  return texto
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'))
+    .map((linea) => {
+      const [nombre = '', rareza = '', imagen = '', grupo = '', coste = '', descripcion = ''] = linea.split(';').map((x) => x.trim());
+      let imagen_url = imagen;
+      if (imagen && !/^https?:\/\//i.test(imagen) && urlBase) imagen_url = urlBase.replace(/\/?$/, '/') + imagen;
+      const r = ALIAS_RAREZA[rareza.toLowerCase()];
+      const errores = [];
+      if (!nombre) errores.push('falta nombre');
+      if (!r) errores.push('rareza no válida');
+      if (!/^https:\/\//.test(imagen_url)) errores.push('falta URL https');
+      if (coste && !/^\d{1,2}$/.test(coste)) errores.push('coste no válido');
+      return {
+        carta: { nombre, rareza: r, imagen_url, grupo: grupo || null, coste: coste ? Number(coste) : 0, descripcion: descripcion || null },
+        errores,
+      };
+    });
+}
+
+function abrirImportar() {
+  cajon.abrir({ titulo: 'Importar cartas en lote', sub: 'Crea muchas cartas de golpe pegando una lista' });
+  const cuerpo = $('cajon-cuerpo');
+  const ayuda = crear('div', 'importar-ayuda');
+  ayuda.innerHTML = 'Una carta por línea, separando con <code>;</code>:<br><code>Nombre ; rareza ; imagen ; grupo ; coste ; texto</code><br>Solo los 3 primeros son obligatorios. Rarezas: <code>comun</code>, <code>rara</code>, <code>epica</code>, <code>legendaria</code>, <code>divina</code>. Las líneas que empiezan por <code>#</code> se ignoran.';
+  const base = entrada('url', '', { placeholder: 'https://tuusuario.github.io/cartas/' });
+  const texto = entrada('textarea', '', { rows: 10, placeholder: 'Dragón Celestial ; divina ; dragon.png ; Base ; 10\nSlime Brote ; comun ; slime.png ; Base ; 1 ; Roba 1 carta.' });
+  texto.style.fontFamily = 'ui-monospace, monospace';
+  texto.style.fontSize = '12px';
+  const tabla = crear('table', 'tabla-import');
+  cuerpo.append(ayuda, campo('URL base de las imágenes (opcional)', base, 'Si la pones, en la columna imagen basta con el nombre del archivo.'), campo('Lista de cartas', texto), tabla);
+
+  const pie = $('cajon-pie');
+  pie.appendChild(crear('div', 'espacio'));
+  const cancelar = crear('button', 'btn', 'Cancelar');
+  cancelar.addEventListener('click', cajon.cerrar);
+  const importar = crear('button', 'btn primario', 'Importar');
+  pie.append(cancelar, importar);
+
+  let lineas = [];
+  const revisar = () => {
+    lineas = analizarLineas(texto.value, base.value.trim());
+    tabla.innerHTML = '<thead><tr><th>#</th><th>Nombre</th><th>Rareza</th><th>Grupo</th><th>Estado</th></tr></thead>';
+    const tb = crear('tbody');
+    lineas.forEach((l, i) => {
+      const tr = crear('tr');
+      tr.append(
+        crear('td', null, String(i + 1)),
+        crear('td', null, l.carta.nombre || '—'),
+        crear('td', null, l.carta.rareza ? textoRareza(l.carta.rareza) : '—'),
+        crear('td', null, l.carta.grupo || '—'),
+        crear('td', l.errores.length ? 'mal' : null, l.errores.length ? l.errores.join(', ') : '✓'),
+      );
+      tb.appendChild(tr);
+    });
+    tabla.appendChild(tb);
+    const malas = lineas.filter((l) => l.errores.length).length;
+    importar.disabled = !lineas.length || malas > 0;
+    importar.textContent = !lineas.length ? 'Importar' : malas ? `${malas} con errores` : `Importar ${lineas.length} cartas`;
+
+    const zona = $('cajon-preview');
+    zona.innerHTML = '';
+    const rejilla = crear('div', 'vista-import');
+    for (const l of lineas.slice(0, 60)) if (!l.errores.length) rejilla.appendChild(elementoCarta({ ...l.carta, id: 0 }));
+    zona.appendChild(rejilla);
+  };
+  texto.addEventListener('input', revisar);
+  base.addEventListener('input', revisar);
+  revisar();
+
+  importar.addEventListener('click', async () => {
+    importar.disabled = true;
+    try {
+      const r = await api('/api/admin/cartas/importar', { method: 'POST', body: { cartas: lineas.map((l) => l.carta) } });
+      if (r.errores.length) {
+        avisar(`Línea ${r.errores[0].linea}: ${r.errores[0].error}`, true);
+        importar.disabled = false;
+        return;
+      }
+      avisar(`✅ ${r.creadas} cartas creadas`);
+      cajon.cerrar();
+      await Promise.all([cargarCartas(), cargarTipos()]);
+    } catch (e) {
+      avisar(e.message, true);
+      importar.disabled = false;
+    }
+  });
 }

@@ -65,6 +65,7 @@
           </div>
           <div class="acciones-cab">
             <input type="search" id="buscar-carta" class="input" placeholder="Busca una carta…">
+            <button class="btn" id="btn-importar">Importar en lote</button>
             <button class="btn primario" id="btn-nueva-carta">+ Nueva carta</button>
           </div>
         </header>
@@ -119,6 +120,28 @@
             <p class="sub">Regala sobres o cartas a tu chat mientras estás en directo.</p>
           </div>
         </header>
+
+        <div class="tarjeta">
+          <h2>Eventos en directo</h2>
+          <p class="sub">Actívalos durante el directo para animar al chat. Los espectadores verán un aviso arriba.</p>
+          <div class="evento-actual" id="evento-actual"></div>
+          <div class="fila" style="align-items:flex-end;margin-top:12px">
+            <div class="campo" style="max-width:160px">
+              <label for="evento-minutos">Duración</label>
+              <select id="evento-minutos" class="input">
+                <option value="15">15 minutos</option>
+                <option value="30" selected>30 minutos</option>
+                <option value="60">1 hora</option>
+                <option value="120">2 horas</option>
+              </select>
+            </div>
+          </div>
+          <div class="eventos-botones">
+            <button class="evento-btn" data-evento="suerte"><b>🍀 Hora de la suerte</b><span>Épicas o mejores ×2</span></button>
+            <button class="evento-btn" data-evento="polvo_doble"><b>✨ Polvo doble</b><span>Desmontar da el doble</span></button>
+            <button class="evento-btn" data-evento="energia_rapida"><b>⚡ Energía rápida</b><span>Se recarga el doble de rápido</span></button>
+          </div>
+        </div>
 
         <div class="tarjeta">
           <h2>Drops rápidos</h2>

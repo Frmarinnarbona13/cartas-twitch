@@ -61,7 +61,9 @@ function reproducirApertura(contenedor, opciones) {
       const titulo = crear('h2', 'ap-titulo', 'Elige tu carta');
       const fila = crear('div', 'ap-cartas');
       const resultado = crear('div', 'ap-resultado oculto');
-      escena.append(titulo, fila, resultado);
+      escena.append(titulo);
+      if (datos.garantizado) escena.appendChild(crear('div', 'ap-texto degradado-texto', '✨ Sobre garantizado: todas épicas o mejores'));
+      escena.append(fila, resultado);
 
       const n = datos.cantidad;
       const ancho = escena.clientWidth || contenedor.clientWidth || 320;
