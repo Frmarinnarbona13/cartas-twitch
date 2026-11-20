@@ -123,7 +123,11 @@ function elementoReverso() {
 // opciones: { serie, nueva, gris }
 // ------------------------------------------------------------------
 function elementoCarta(carta, opciones = {}) {
-  const el = crear('div', `carta r-${carta.rareza} diseno-${carta.diseno || 'clasica'} efecto-${carta.efecto || 'auto'}` + (opciones.gris ? ' gris' : ''));
+  const el = crear(
+    'div',
+    `carta r-${carta.rareza} diseno-${carta.diseno || 'clasica'} efecto-${carta.efecto || 'auto'}` +
+      (carta.efecto_modo === 'mover' ? ' solo-mover' : '') + (opciones.gris ? ' gris' : ''),
+  );
   const marco = crear('div', 'c-marco');
 
   const cab = crear('div', 'c-cab');
@@ -164,6 +168,7 @@ function elementoCarta(carta, opciones = {}) {
   marco.appendChild(pie);
 
   el.appendChild(marco);
+  if (carta.efecto === 'galaxia') el.appendChild(capaGalaxia(carta.id || carta.nombre || 1));
   return el;
 }
 
@@ -191,6 +196,7 @@ function elementoPack(tipo) {
   }
   el.appendChild(crear('div', 'diamante'));
   el.appendChild(crear('div', 'pack-nombre', tipo?.nombre || 'Sobre'));
+  if (tipo?.efecto === 'galaxia') brillo.appendChild(capaGalaxia('sobre-' + (tipo.id || tipo.nombre || 1)));
   el.appendChild(brillo);
   return el;
 }
@@ -379,4 +385,89 @@ function elementoFunda(carta, opciones = {}) {
   ventana.appendChild(elementoCarta(carta, { serie: opciones.serie }));
   funda.append(etiqueta, ventana);
   return funda;
+}
+
+
+// ------------------------------------------------------------------
+// Efecto galaxia: cielo estrellado generado al azar pero siempre igual
+// para la misma carta (la "semilla" es su id). Se dibuja con SVG.
+// ------------------------------------------------------------------
+function aleatorioConSemilla(semilla) {
+  let h = 2166136261;
+  for (const ch of String(semilla)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => {
+    h += 0x6d2b79f5;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function capaGalaxia(semilla) {
+  const azar = aleatorioConSemilla(semilla);
+  const capa = crear('div', 'c-galaxia');
+
+  // Nebulosas de colores en posiciones distintas para cada carta
+  const tonos = ['168, 85, 247', '236, 72, 153', '59, 130, 246', '45, 212, 191', '250, 204, 21'];
+  const nebulosa = crear('div', 'nebulosa');
+  const manchas = [];
+  for (let i = 0; i < 3; i++) {
+    const color = tonos[Math.floor(azar() * tonos.length)];
+    manchas.push(`radial-gradient(ellipse ${30 + azar() * 25}% ${22 + azar() * 20}% at ${15 + azar() * 70}% ${15 + azar() * 70}%, rgba(${color}, ${0.35 + azar() * 0.3}), transparent 70%)`);
+  }
+  nebulosa.style.background = manchas.join(',');
+  capa.appendChild(nebulosa);
+
+  const colores = ['#ffffff', '#ffffff', '#dbeafe', '#fef3c7', '#fbcfe8'];
+  const crearCielo = (clase, cantidad, radioMin, radioMax, titilan) => {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 100 140');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    svg.setAttribute('class', clase);
+    for (let i = 0; i < cantidad; i++) {
+      const c = document.createElementNS(SVG_NS, 'circle');
+      c.setAttribute('cx', (azar() * 100).toFixed(2));
+      c.setAttribute('cy', (azar() * 140).toFixed(2));
+      c.setAttribute('r', (radioMin + Math.pow(azar(), 2.2) * (radioMax - radioMin)).toFixed(2));
+      c.setAttribute('fill', colores[Math.floor(azar() * colores.length)]);
+      c.setAttribute('opacity', (0.35 + azar() * 0.65).toFixed(2));
+      if (azar() < titilan) {
+        c.setAttribute('class', 'titila');
+        c.style.setProperty('--d', (1.8 + azar() * 2.8).toFixed(2) + 's');
+        c.style.setProperty('--r', (-azar() * 4).toFixed(2) + 's');
+      }
+      svg.appendChild(c);
+    }
+    return svg;
+  };
+  capa.appendChild(crearCielo('lejos', 55, 0.15, 0.45, 0.25));
+  const cerca = crearCielo('cerca', 16, 0.35, 0.9, 0.5);
+
+  // Algunas estrellas grandes de 4 puntas que destellan
+  for (let i = 0; i < 3; i++) {
+    const x = 8 + azar() * 84;
+    const y = 8 + azar() * 124;
+    const t = 1.6 + azar() * 1.6;
+    const p = document.createElementNS(SVG_NS, 'path');
+    p.setAttribute('d', `M${x} ${y - t}L${x + t * 0.22} ${y - t * 0.22}L${x + t} ${y}L${x + t * 0.22} ${y + t * 0.22}L${x} ${y + t}L${x - t * 0.22} ${y + t * 0.22}L${x - t} ${y}L${x - t * 0.22} ${y - t * 0.22}Z`);
+    p.setAttribute('fill', '#ffffff');
+    p.setAttribute('class', 'destello');
+    p.style.setProperty('--d', (2.6 + azar() * 2.4).toFixed(2) + 's');
+    p.style.setProperty('--r', (-azar() * 4).toFixed(2) + 's');
+    cerca.appendChild(p);
+  }
+  capa.appendChild(cerca);
+
+  // Estrellas fugaces de vez en cuando
+  for (let i = 0; i < 2; i++) {
+    const f = crear('div', 'fugaz');
+    f.style.left = 55 + azar() * 45 + '%';
+    f.style.top = azar() * 45 + '%';
+    f.style.setProperty('--d', (7 + azar() * 6).toFixed(1) + 's');
+    f.style.setProperty('--r', (azar() * 8).toFixed(1) + 's');
+    capa.appendChild(f);
+  }
+  return capa;
 }

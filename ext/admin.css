@@ -227,8 +227,8 @@ textarea.input { resize: vertical; min-height: 60px; }
 .ef-auto .muestra { background: conic-gradient(var(--r-comun), var(--r-rara), var(--r-epica), var(--r-legendaria), var(--r-divina), var(--r-comun)); }
 .ef-ninguno .muestra { background: #2a2a35; }
 .ef-brillo .muestra { background: linear-gradient(115deg, #3a3a48 30%, #fff 48%, #3a3a48 62%); background-size: 250% 100%; animation: brillo 2.4s ease-in-out infinite; }
-.ef-arcoiris .muestra { background: linear-gradient(125deg, #ff0096, #ffe600, #00ffaa, #00a0ff, #b400ff); background-size: 300% 300%; animation: holo-desliza 4s linear infinite; }
-.ef-galaxia .muestra { background: radial-gradient(circle, #fff 0 1px, transparent 1.5px) 0 0 / 9px 11px, radial-gradient(circle at 30% 30%, #7c3aed, #1e1b4b 70%); animation: titilar 2s ease-in-out infinite; }
+.ef-arcoiris .muestra { background: linear-gradient(125deg, #ff0096, #ffe600, #00ffaa, #00a0ff, #b400ff); background-size: 300% 300%; animation: holo-desliza 3s ease-in-out infinite alternate; }
+.ef-galaxia .muestra { background: radial-gradient(circle at 25% 30%, #fff 0 .8px, transparent 1.3px), radial-gradient(circle at 70% 20%, #fff 0 .6px, transparent 1.1px), radial-gradient(circle at 60% 70%, #ffe9a8 0 .9px, transparent 1.4px), radial-gradient(circle at 35% 75%, #b8d8ff 0 .6px, transparent 1.1px), radial-gradient(ellipse at 35% 35%, rgba(168, 85, 247, .8), transparent 60%), radial-gradient(ellipse at 70% 70%, rgba(236, 72, 153, .6), transparent 55%), #0b0820; }
 .ef-dorado .muestra { background: linear-gradient(115deg, #7a5200 20%, #ffd700 40%, #fff6c8 48%, #ffb300 58%, #7a5200 80%); background-size: 250% 100%; animation: brillo 2.4s ease-in-out infinite; }
 .ef-cristal .muestra { background: repeating-linear-gradient(60deg, #24304a 0 4px, #96dcff 5px, #ff96f0 7px, #24304a 9px); animation: tono 5s linear infinite; }
 

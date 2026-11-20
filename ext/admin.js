@@ -291,7 +291,7 @@ function fichaCarta(c) {
 
 function editarCarta(carta, plantilla) {
   const nueva = !carta;
-  const c = carta ? { ...carta } : plantilla ? { ...plantilla } : { nombre: '', coste: 0, rareza: 'comun', imagen_url: '', descripcion: '', frase: '', artista: '', grupo: '', limite_copias: null, activa: true, diseno: 'clasica', efecto: 'auto', copias_emitidas: 0 };
+  const c = carta ? { ...carta } : plantilla ? { ...plantilla } : { nombre: '', coste: 0, rareza: 'comun', imagen_url: '', descripcion: '', frase: '', artista: '', grupo: '', limite_copias: null, activa: true, diseno: 'clasica', efecto: 'auto', efecto_modo: 'siempre', copias_emitidas: 0 };
   cajon.abrir({
     titulo: nueva ? 'Nueva carta' : 'Editar carta',
     sub: nueva ? 'Rellena los datos; la vista previa se actualiza sola.' : `${numero3(c.id)} · ${c.copias_emitidas} copias emitidas`,
@@ -365,6 +365,19 @@ function editarCarta(carta, plantilla) {
     efectos.appendChild(b);
   }
 
+  // ¿Efecto siempre visible o solo al mover la carta?
+  const modoEfecto = crear('div', 'segmentado');
+  for (const [v, txt] of [['siempre', 'Siempre visible'], ['mover', 'Solo al mover la carta']]) {
+    const b = crear('button', (c.efecto_modo || 'siempre') === v ? 'activo' : '', txt);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      c.efecto_modo = v;
+      modoEfecto.querySelectorAll('button').forEach((x) => x.classList.toggle('activo', x === b));
+      preview();
+    });
+    modoEfecto.appendChild(b);
+  }
+
   const limitada = interruptor('Edición limitada', c.limite_copias != null);
   const limite = entrada('number', c.limite_copias ?? 100, { min: Math.max(1, c.copias_emitidas || 1) });
   const campoLimite = campo('Número de copias', limite, c.copias_emitidas ? `Ya hay ${c.copias_emitidas} emitidas: no puede ser menor.` : 'Cuando se repartan todas, deja de salir en los sobres.');
@@ -380,6 +393,7 @@ function editarCarta(carta, plantilla) {
     campo('Rareza', rarezas),
     campo('Diseño', disenos),
     campo('Efecto holográfico', efectos, '«Automático» pone brillo a las legendarias y holo a las divinas.'),
+    campo('¿Cuándo se ve el efecto?', modoEfecto, '«Solo al mover»: aparece al pasar el ratón o inclinar la carta, como una carta real bajo la luz.'),
     campo('URL de la imagen', imagen, 'Sube la imagen a GitHub Pages (o similar) y pega aquí el enlace. Formato horizontal 5:4.'),
     campo('Texto / efecto', desc),
     campo('Frase', frase),
@@ -451,7 +465,7 @@ function editarCarta(carta, plantilla) {
       const body = {
         nombre: c.nombre, coste: c.coste, rareza: c.rareza, imagen_url: c.imagen_url, descripcion: c.descripcion,
         frase: c.frase, artista: c.artista, grupo: c.grupo, limite_copias: c.limite_copias, activa: c.activa,
-        diseno: c.diseno, efecto: c.efecto,
+        diseno: c.diseno, efecto: c.efecto, efecto_modo: c.efecto_modo || 'siempre',
       };
       if (nueva) await api('/api/admin/cartas', { method: 'POST', body });
       else await api('/api/admin/cartas', { method: 'PUT', body: { id: c.id, ...body } });
