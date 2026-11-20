@@ -41,7 +41,7 @@ const RUTAS = {
 };
 
 export default function router(req, res) {
-  const ruta = String(req.query.ruta || '').replace(/^\/+|\/+$/g, '');
+  const ruta = String(req.query.ruta || '').trim().replace(/^\/+|\/+$/g, '');
 
   if (ruta === 'arte') return publico.arte(req, res);
 

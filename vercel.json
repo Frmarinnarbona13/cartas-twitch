@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:ruta+", "destination": "/api?ruta=:ruta+" }
+    { "source": "/api/:ruta+", "destination": "/api?ruta=:ruta" }
   ],
   "headers": [
     {
